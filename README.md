@@ -1,3 +1,5 @@
+
+# 本README已长期未更新，请勿参考，如有疑问可以直接ISSUE询问
 # Taiwu MODs - 太吾绘卷 MOD 开发工作区
 
 ## 📖 项目简介
@@ -373,5 +375,5 @@ git push origin master --tags
 ---
 
 **最后更新：** 2026-06-23  
-**维护者：** Lingma AI Assistant  
+**维护者：** AI Assistant  
 **状态：** ✅ 活跃开发中
