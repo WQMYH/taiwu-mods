@@ -39,7 +39,7 @@ return {
 			DefaultValue = true,
 		},
 		[4] = {
-			SettingType = "TextField",
+			SettingType = "InputField",
 			Key = "DumpDirectory",
 			DisplayName = "输出目录",
 			Description = "相对于游戏根目录的输出文件夹路径。",
