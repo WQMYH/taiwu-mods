@@ -18,10 +18,7 @@ CopyBuildingModernized.Another/Plugins/*.pdb
 CopyBuildingModernized.Another/Plugins/*.deps.json
 
 ## Decompiler outputs (LARGE FILES - DO NOT COMMIT)
-spied/The Scroll of Taiwu/
-spied/Spy-tools/Decompiler_Tools/ILSpy_Latest/
-spied/Spy-tools/Decompiler_Tools/TaiwuDecompiler_New/
-spied/Spy-tools/Decompiler_Tools/releaseDecompiler/
+spied/
 *.dll
 character_search*.txt
 
@@ -37,6 +34,8 @@ todo-merge/ExpandRangeCompatibility/
 ## AutoMonthlyEvent specific
 AutoMonthlyEvent/data/*.csv
 AutoMonthlyEvent/Dump_out/
+mods/AutoMonthlyEvent/data/*.csv
+mods/AutoMonthlyEvent/Dump_out/
 *.jsonl
 
 ## IDE
