@@ -1,0 +1,89 @@
+# Taiwu MOD Development - Git Ignore
+
+## Build outputs
+bin/
+obj/
+artifacts/mods/
+
+## MOD projects build outputs
+mods/*/bin/
+mods/*/obj/
+mods/*/Plugins/*.dll
+mods/*/Plugins/*.pdb
+mods/*/Plugins/*.deps.json
+
+## Specific project outputs
+CopyBuildingModernized.Another/Plugins/*.dll
+CopyBuildingModernized.Another/Plugins/*.pdb
+CopyBuildingModernized.Another/Plugins/*.deps.json
+
+## Decompiler outputs (LARGE FILES - DO NOT COMMIT)
+spied/The Scroll of Taiwu/
+spied/Spy-tools/Decompiler_Tools/ILSpy_Latest/
+spied/Spy-tools/Decompiler_Tools/TaiwuDecompiler_New/
+spied/Spy-tools/Decompiler_Tools/releaseDecompiler/
+*.dll
+character_search*.txt
+
+## Third-party sample code (external repositories)
+sample/HappyLife/
+sample/community-taiwu-mods/
+sample/taiwu-mods/
+
+## Temporary merge workspace
+todo-merge/merged/
+todo-merge/ExpandRangeCompatibility/
+
+## AutoMonthlyEvent specific
+AutoMonthlyEvent/data/*.csv
+AutoMonthlyEvent/Dump_out/
+*.jsonl
+
+## IDE
+.vs/
+.vscode/
+*.user
+*.suo
+*.sln.DotSettings.user
+.idea/
+*.code-workspace
+
+## NuGet
+packages/
+*.nupkg
+
+## Logs
+*.log
+Player.log
+Player-prev.log
+GameData_*.log
+output_log.txt
+
+## Temporary files
+*.tmp
+*.bak
+Thumbs.db
+*.swp
+*.swo
+
+## Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.env/
+
+## OS
+.DS_Store
+desktop.ini
+
+## AI Assistant caches
+.lingma/
+.agents/
+.codegraph/
+
+## Documentation outputs
+docs/
+
+## Documentation cache
+MOD开发文档/.cache/

@@ -1,0 +1,9 @@
+﻿TemplateId,Name,Desc,Icon,ImgPrefix,CollectMultiplier,ResourceReducePerCollection,LifeSkillType,PossibleBuildingCoreItem,PossibleUpgradedBuildingCoreItem,HitSound,WhooshSound,ShockSound,StepSound
+0,食材,寻常五谷、杂粮、禽畜等。,ui9_icon_resource_bar_0,charactermenu3_10_shicai_,1,25,14,[100; 108; 109],[],[],[],[],[]
+1,木材,寻常木料、竹枝、藤蔓等。,ui9_icon_resource_bar_1,charactermenu3_10_mucai_,1,25,7,[102; 108],[112; 113],[se_combat_hit_wood_1; se_combat_hit_wood_2],[se_combat_whoosh_wood],[se_combat_shock_wood_1; se_combat_shock_wood_2],[se_combat_foot_wood_1; se_combat_foot_wood_2]
+2,金铁,寻常金银、铜铁等。,ui9_icon_resource_bar_2,charactermenu3_10_jintie_,1,25,6,[101; 103],[110; 111],[se_combat_hit_iron_1; se_combat_hit_iron_2],[se_combat_whoosh_iron],[se_combat_shock_iron_1; se_combat_shock_iron_2],[se_combat_foot_iron_1; se_combat_foot_iron_2]
+3,玉石,寻常玉料、石料等。,ui9_icon_resource_bar_3,charactermenu3_10_yushi_,1,25,11,[103; 107],[118; 119],[se_combat_hit_jade_1; se_combat_hit_jade_2],[se_combat_whoosh_jade],[se_combat_shock_jade_1; se_combat_shock_jade_2],[se_combat_foot_jade_1; se_combat_foot_jade_2]
+4,织物,寻常植物、丝茧、毛皮等。,ui9_icon_resource_bar_4,charactermenu3_10_zhiwu_,1,25,10,[106; 109],[116; 117],[se_combat_hit_cloth_1; se_combat_hit_cloth_2],[se_combat_whoosh_cloths],[se_combat_shock_cloth_1; se_combat_shock_cloth_2],[se_combat_foot_cloth_1; se_combat_foot_cloth_2]
+5,药材,来自于各类草木、矿石、虫、兽等物的寻常药材。,ui9_icon_resource_bar_5,charactermenu3_10_yaocai_,1,25,8,[104; 105],[114; 115],[],[],[],[]
+6,银钱,依照前朝通宝的样式以黄铜混合白银铸造而成的钱币。,ui9_icon_resource_bar_6,charactermenu3_10_jinqian_,-1,-1,-1,[],[],[],[],[],[]
+7,威望,由百姓、武林中人甚至是外道恶徒的仰慕、敬畏汇集而来的权威。,ui9_icon_resource_bar_7,charactermenu3_10_weiwang_,-1,-1,-1,[],[],[],[],[],[]

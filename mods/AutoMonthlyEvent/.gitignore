@@ -1,0 +1,19 @@
+# 编译输出
+bin/
+obj/
+*.dll
+*.pdb
+*.deps.json
+
+# IDE
+.vs/
+.vscode/
+*.user
+*.suo
+
+# 临时文件
+*.log
+*.tmp
+
+# 部署目录（不要提交游戏相关文件）
+Deploy/

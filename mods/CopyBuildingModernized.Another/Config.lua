@@ -1,0 +1,50 @@
+return {
+	Title = "太吾村建筑蓝图工具",
+	Author = "Slimoon",
+	Version = "2.0.0.0",
+	Description = "在建筑界面提供太吾村建筑模板的导入与导出，可保存外部 .bin 蓝图文件并支持扩展村规模。导入后若部分建筑依赖尚未显示，存读档一次即可刷新。",
+	Source = 0,
+	GameVersion = "0.84.54-test",
+	FrontendPlugins = {
+		[1] = "CopyBuildingModernized.Frontend.dll",
+	},
+	BackendPlugins = {
+		[1] = "CopyBuildingModernized.Backend.dll",
+	},
+	TagList = {
+		[1] = "Modifications",
+		[2] = "Optimizations",
+	},
+	Visibility = 2,
+	DefaultSettings = {
+		[1] = {
+			SettingType = "Toggle",
+			Key = "trySetLeader",
+			DisplayName = "导入时自动安排产业领袖",
+			Description = "导入建筑蓝图时，为需要产业领袖的建筑自动分配合适村民，并补齐村民身份与村衣。",
+			DefaultValue = true,
+		},
+		[2] = {
+			SettingType = "Slider",
+			Key = "AddSkillGrade",
+			DisplayName = "产业领袖技艺补强",
+			Description = "为自动分配的产业领袖补充对应技艺等级。-1 为关闭；0 为一品；8 表示从九品到一品全部补齐。",
+			MinValue = -1,
+			MaxValue = 8,
+			StepSize = 0,
+			DefaultValue = 8,
+		},
+		[3] = {
+			SettingType = "Toggle",
+			Key = "cleanOperationStateOnImport",
+			DisplayName = "导入时清理操作状态",
+			Description = "开启后，导入建筑时清空操作进度、工匠订单、自动工作/售卖列表和残留操作员记录，避免导入后建筑操作状态异常导致报错。",
+			DefaultValue = true,
+		},
+	},
+	ChangeConfig = false,
+	HasArchive = false,
+	NeedRestartWhenSettingChanged = false,
+	Cover = "Cover.png",
+	WorkshopCover = "Cover.png",
+}
