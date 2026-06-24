@@ -1,21 +1,68 @@
--- AutoMonthlyEvent config.
 return {
-    -- Keep this false during ID discovery.
-    EnableAutoProcess = false,
-
-    -- Read-only discovery mode. Dumps IDs and options; does not process events.
-    DiscoveryMode = true,
-
-    -- Write discovery output as JSON/JSONL.
-    DumpToJson = true,
-
-    -- Output directory relative to the game root.
-    DumpDirectory = "Dump_out",
-
-    -- Reserved for the future auto-processing phase.
-    ShowConfirmation = false,
-    SkipSpecialEvents = true,
-
-    -- Verbose log output.
-    LogVerbose = false
+	Title = "批量月度交互自动化",
+	Author = "WQMYH",
+	Version = "0.1.0.0",
+	Description = "自动检测并批量化处理太吾绘卷中的月度交互事件。支持发现模式导出事件ID和选项，基于白名单智能判断可安全自动处理的事件。",
+	Source = 0,
+	GameVersion = "0.84.54-test",
+	FrontendPlugins = {
+		[1] = "AutoMonthlyEvent.Frontend.dll",
+	},
+	BackendPlugins = {
+		[1] = "AutoMonthlyEvent.Backend.dll",
+	},
+	TagList = {
+		[1] = "Modifications",
+		[2] = "Quality of Life",
+	},
+	Visibility = 2,
+	DefaultSettings = {
+		[1] = {
+			SettingType = "Toggle",
+			Key = "EnableAutoProcess",
+			DisplayName = "启用自动处理",
+			Description = "开启后自动处理符合条件的月度事件。发现阶段请保持关闭。",
+			DefaultValue = false,
+		},
+		[2] = {
+			SettingType = "Toggle",
+			Key = "DiscoveryMode",
+			DisplayName = "发现模式",
+			Description = "只读模式，导出事件ID和选项到JSON文件，不自动处理事件。",
+			DefaultValue = true,
+		},
+		[3] = {
+			SettingType = "Toggle",
+			Key = "DumpToJson",
+			DisplayName = "导出到JSON",
+			Description = "将发现的数据写入JSON/JSONL文件。",
+			DefaultValue = true,
+		},
+		[4] = {
+			SettingType = "TextField",
+			Key = "DumpDirectory",
+			DisplayName = "输出目录",
+			Description = "相对于游戏根目录的输出文件夹路径。",
+			DefaultValue = "Dump_out",
+		},
+		[5] = {
+			SettingType = "Toggle",
+			Key = "SkipSpecialEvents",
+			DisplayName = "跳过特殊事件",
+			Description = "跳过SpecialEvent和LockedEvent类型的事件。",
+			DefaultValue = true,
+		},
+		[6] = {
+			SettingType = "Toggle",
+			Key = "LogVerbose",
+			DisplayName = "详细日志",
+			Description = "启用详细的日志输出。",
+			DefaultValue = false,
+		},
+	},
+	ChangeConfig = false,
+	HasArchive = false,
+	NeedRestartWhenSettingChanged = false,
+	Cover = "Cover.png",
+	WorkshopCover = "Cover.png",
 }
