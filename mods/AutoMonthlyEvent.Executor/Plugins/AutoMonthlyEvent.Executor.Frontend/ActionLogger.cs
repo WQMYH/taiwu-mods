@@ -9,11 +9,13 @@ namespace AutoMonthlyEvent.Executor.Frontend
     {
         private static ExecutorConfig? _config;
         private static string _logFilePath = string.Empty;
+        private static string _humanLogFilePath = string.Empty;
 
         public static void Configure(ExecutorConfig config)
         {
             _config = config;
             _logFilePath = Path.Combine(config.ModDirectoryPath, config.LogDirectory, config.ActionLogFileName);
+            _humanLogFilePath = Path.Combine(config.ModDirectoryPath, config.LogDirectory, config.HumanLogFileName);
         }
 
         public static void Log(EventDecision decision)
@@ -29,6 +31,7 @@ namespace AutoMonthlyEvent.Executor.Frontend
                     Directory.CreateDirectory(directory);
 
                 File.AppendAllText(_logFilePath, decision.ToJsonLine() + Environment.NewLine, Encoding.UTF8);
+                File.AppendAllText(_humanLogFilePath, decision.ToReadableLine() + Environment.NewLine, Encoding.UTF8);
             }
             catch (Exception ex)
             {

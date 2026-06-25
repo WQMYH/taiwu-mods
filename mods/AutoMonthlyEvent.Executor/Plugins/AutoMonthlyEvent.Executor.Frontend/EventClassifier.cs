@@ -11,9 +11,14 @@ namespace AutoMonthlyEvent.Executor.Frontend
         public const string TeaWineOrItemRequest = "teaWineOrItemRequest";
         public const string RequestResult = "requestResult";
         public const string GuidanceResult = "guidanceResult";
+        public const string AdoptAbandonedBaby = "adoptAbandonedBaby";
         public const string SparringRequest = "sparringRequest";
         public const string ChallengeOrContestRequest = "challengeOrContestRequest";
         public const string AdventureOrStory = "adventureOrStory";
+
+        private const string AdoptAbandonedBabyEventGuid = "35dbcaf7-a830-419e-9fea-2b2cf88b8bfb";
+        private const string AdoptBabyOptionKey = "Option_1751715976";
+        private const string PostponeAdoptionOptionKey = "Option_-899805435";
 
         private static readonly HashSet<string> GiveOptionKeys = new HashSet<string> { "Option_1502572995" };
         private static readonly HashSet<string> RejectOptionKeys = new HashSet<string> { "Option_-1313833903" };
@@ -27,6 +32,10 @@ namespace AutoMonthlyEvent.Executor.Frontend
         public static string Classify(TaiwuEventDisplayData data)
         {
             string text = BuildSearchText(data);
+
+            if (string.Equals(data.EventGuid, AdoptAbandonedBabyEventGuid, StringComparison.OrdinalIgnoreCase)
+                || (ContainsAny(text, "收养弃婴") && ContainsAny(text, "收养至太吾村", "暂且搁置")))
+                return AdoptAbandonedBaby;
 
             if (ContainsAny(text, "切磋", "请太吾指点招式", "不妨切磋"))
                 return SparringRequest;
@@ -62,6 +71,11 @@ namespace AutoMonthlyEvent.Executor.Frontend
         public static bool IsAutoContinueType(string candidateType)
         {
             return candidateType == RequestResult || candidateType == GuidanceResult;
+        }
+
+        public static bool IsAdoptionType(string candidateType)
+        {
+            return candidateType == AdoptAbandonedBaby;
         }
 
         public static bool IsExplicitlyUnsupported(string candidateType)
@@ -149,6 +163,53 @@ namespace AutoMonthlyEvent.Executor.Frontend
             }
 
             option = current;
+            return true;
+        }
+
+        public static bool TryFindAdoptionOptions(TaiwuEventDisplayData data, out EventOptionInfo adoptOption, out EventOptionInfo postponeOption, out string reason)
+        {
+            adoptOption = default;
+            postponeOption = default;
+            reason = string.Empty;
+
+            if (data.EventOptionInfos == null)
+            {
+                reason = "缺少事件选项";
+                return false;
+            }
+
+            bool foundAdopt = false;
+            bool foundPostpone = false;
+            foreach (EventOptionInfo option in data.EventOptionInfos)
+            {
+                if (option.OptionState != 0)
+                    continue;
+
+                string optionKey = option.OptionKey ?? string.Empty;
+                string optionContent = option.OptionContent ?? string.Empty;
+                if (!foundAdopt
+                    && optionKey == AdoptBabyOptionKey
+                    && ContainsAny(optionContent, "收养"))
+                {
+                    adoptOption = option;
+                    foundAdopt = true;
+                }
+
+                if (!foundPostpone
+                    && optionKey == PostponeAdoptionOptionKey
+                    && ContainsAny(optionContent, "搁置"))
+                {
+                    postponeOption = option;
+                    foundPostpone = true;
+                }
+            }
+
+            if (!foundAdopt || !foundPostpone)
+            {
+                reason = $"收养弃婴选项未命中白名单或不可用：收养={foundAdopt}, 搁置={foundPostpone}";
+                return false;
+            }
+
             return true;
         }
 

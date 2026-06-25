@@ -39,21 +39,21 @@ namespace AutoMonthlyEvent.Executor.Frontend
             ExecutorConfig? config = _config;
             if (config == null)
             {
-                callback(RelationResult.Unresolved(requester.FavorabilityToTaiwu, "config missing"));
+                callback(RelationResult.Unresolved(requester.FavorabilityToTaiwu, "配置缺失"));
                 return;
             }
 
             IAsyncMethodRequestHandler? handler = _requestHandler;
             if (handler == null)
             {
-                callback(RelationResult.Unresolved(requester.FavorabilityToTaiwu, "async handler missing"));
+                callback(RelationResult.Unresolved(requester.FavorabilityToTaiwu, "异步请求处理器缺失"));
                 return;
             }
 
             int taiwuId = GetTaiwuCharId();
             if (taiwuId <= 0 || requester.CharacterId <= 0)
             {
-                callback(RelationResult.Unresolved(requester.FavorabilityToTaiwu, "invalid character id"));
+                callback(RelationResult.Unresolved(requester.FavorabilityToTaiwu, "角色 ID 无效"));
                 return;
             }
 
@@ -74,21 +74,21 @@ namespace AutoMonthlyEvent.Executor.Frontend
                             Favorability = requester.FavorabilityToTaiwu,
                             ShouldGive = allowed || requester.FavorabilityToTaiwu >= config.FallbackFavorabilityThreshold,
                             Reason = allowed
-                                ? "allowed relation"
+                                ? "关系命中允许列表"
                                 : requester.FavorabilityToTaiwu >= config.FallbackFavorabilityThreshold
-                                    ? "favorability threshold reached"
-                                    : "relation and favorability not enough"
+                                    ? "好感达到阈值"
+                                    : "关系和好感未满足条件"
                         });
                     }
                     catch (Exception ex)
                     {
-                        callback(RelationResult.Unresolved(requester.FavorabilityToTaiwu, "relation callback failed: " + ex.GetType().Name));
+                        callback(RelationResult.Unresolved(requester.FavorabilityToTaiwu, "关系查询回调失败：" + ex.GetType().Name));
                     }
                 });
             }
             catch (Exception ex)
             {
-                callback(RelationResult.Unresolved(requester.FavorabilityToTaiwu, "relation query failed: " + ex.GetType().Name));
+                callback(RelationResult.Unresolved(requester.FavorabilityToTaiwu, "关系查询失败：" + ex.GetType().Name));
             }
         }
 
