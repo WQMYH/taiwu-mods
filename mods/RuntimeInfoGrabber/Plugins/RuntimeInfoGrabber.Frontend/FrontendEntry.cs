@@ -3,9 +3,9 @@ using GameData.Utilities;
 using HarmonyLib;
 using TaiwuModdingLib.Core.Plugin;
 
-namespace AutoMonthlyEvent.Frontend
+namespace RuntimeInfoGrabber.Frontend
 {
-    [PluginConfig("AutoMonthlyEvent.Frontend", "AutoMonthlyEvent", "0.1.0")]
+    [PluginConfig("RuntimeInfoGrabber.Frontend", "WQMYH", "0.1.0")]
     public class FrontendEntry : TaiwuRemakePlugin
     {
         private static Harmony? _harmony;
@@ -18,14 +18,14 @@ namespace AutoMonthlyEvent.Frontend
                 DiscoveryDumper.EnsureDumpDirectory();
                 DiscoveryDumper.ExportStaticCatalogs();
 
-                _harmony = new Harmony("com.auto.monthlyevent.frontend.discovery");
+                _harmony = new Harmony("com.runtimeinfograbber.frontend.discovery");
                 DiscoveryDumper.InstallPatches(_harmony);
 
-                AdaptableLog.Info("[AutoMonthlyEvent] Frontend discovery plugin loaded successfully.");
+                AdaptableLog.Info("[RuntimeInfoGrabber] Frontend discovery plugin loaded successfully.");
             }
             catch (Exception ex)
             {
-                AdaptableLog.Error($"[AutoMonthlyEvent] Failed to load frontend plugin: {ex}");
+                AdaptableLog.Error($"[RuntimeInfoGrabber] Failed to load frontend plugin: {ex}");
             }
         }
 
@@ -36,11 +36,11 @@ namespace AutoMonthlyEvent.Frontend
                 _harmony?.UnpatchSelf();
                 _harmony = null;
 
-                AdaptableLog.Info("[AutoMonthlyEvent] Frontend discovery plugin unloaded.");
+                AdaptableLog.Info("[RuntimeInfoGrabber] Frontend discovery plugin unloaded.");
             }
             catch (Exception ex)
             {
-                AdaptableLog.Error($"[AutoMonthlyEvent] Failed to unload frontend plugin: {ex}");
+                AdaptableLog.Error($"[RuntimeInfoGrabber] Failed to unload frontend plugin: {ex}");
             }
         }
     }

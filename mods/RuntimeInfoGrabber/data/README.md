@@ -1,8 +1,7 @@
-# AutoMonthlyEvent MOD - 数据文件说明
+# 运行时信息抓取 MOD - 数据文件说明
 
 **生成时间**: 2026-06-23  
-**数据来源**: 游戏运行时导出的 JSON/JSONL 文件  
-**转换工具**: `convert_json_to_csv.py`
+**数据来源**: 游戏运行时导出的 JSON/JSONL 文件
 
 ---
 

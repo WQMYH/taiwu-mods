@@ -1,15 +1,15 @@
 return {
-	Title = "批量月度交互自动化",
+	Title = "运行时信息抓取",
 	Author = "WQMYH",
 	Version = "0.1.0.0",
-	Description = "自动检测并批量化处理太吾绘卷中的月度交互事件。支持发现模式导出事件ID和选项，基于白名单智能判断可安全自动处理的事件。",
+	Description = "自动抓取太吾绘卷运行时的月度事件、交互选项等游戏数据，导出为JSON/CSV文件供分析使用。",
 	Source = 0,
 	GameVersion = "0.84.54-test",
 	FrontendPlugins = {
-		[1] = "AutoMonthlyEvent.Frontend.dll",
+		[1] = "RuntimeInfoGrabber.Frontend.dll",
 	},
 	BackendPlugins = {
-		[1] = "AutoMonthlyEvent.Backend.dll",
+		[1] = "RuntimeInfoGrabber.Backend.dll",
 	},
 	TagList = {
 		[1] = "Modifications",

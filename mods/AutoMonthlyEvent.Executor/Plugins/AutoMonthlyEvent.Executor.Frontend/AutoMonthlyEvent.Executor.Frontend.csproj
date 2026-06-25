@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>AutoMonthlyEvent.Executor.Frontend</AssemblyName>
+    <RootNamespace>AutoMonthlyEvent.Executor.Frontend</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <TaiwuGameDir Condition="'$(TaiwuGameDir)' == ''">A:\SteamLibrary\steamapps\common\The Scroll Of Taiwu</TaiwuGameDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(TaiwuGameDir)\The Scroll of Taiwu_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="GameData.Shared">
+      <HintPath>$(TaiwuGameDir)\The Scroll of Taiwu_Data\Managed\GameData.Shared.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="GameData.Utilities">
+      <HintPath>$(TaiwuGameDir)\The Scroll of Taiwu_Data\Managed\GameData.Utilities.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="GameData.Utilities.Structure">
+      <HintPath>$(TaiwuGameDir)\The Scroll of Taiwu_Data\Managed\GameData.Utilities.Structure.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(TaiwuGameDir)\The Scroll of Taiwu_Data\Managed\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>$(TaiwuGameDir)\The Scroll of Taiwu_Data\Managed\UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(TaiwuGameDir)\The Scroll of Taiwu_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="TaiwuModdingLib">
+      <HintPath>$(TaiwuGameDir)\The Scroll of Taiwu_Data\Managed\TaiwuModdingLib.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Import Project="..\..\..\Taiwu.Mod.Plugin.Pack.targets" />
+</Project>

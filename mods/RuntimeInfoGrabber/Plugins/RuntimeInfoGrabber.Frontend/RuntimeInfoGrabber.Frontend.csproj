@@ -1,8 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <AssemblyName>AutoMonthlyEvent.Backend</AssemblyName>
-    <RootNamespace>AutoMonthlyEvent.Backend</RootNamespace>
+    <AssemblyName>RuntimeInfoGrabber.Frontend</AssemblyName>
+    <RootNamespace>RuntimeInfoGrabber.Frontend</RootNamespace>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
   </PropertyGroup>
@@ -34,6 +34,14 @@
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>$(TaiwuGameDir)\The Scroll of Taiwu_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(TaiwuGameDir)\The Scroll of Taiwu_Data\Managed\UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.TextMeshPro">
+      <HintPath>$(TaiwuGameDir)\The Scroll of Taiwu_Data\Managed\Unity.TextMeshPro.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="TaiwuModdingLib">
