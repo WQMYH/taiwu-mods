@@ -24,9 +24,6 @@ namespace RuntimeInfoGrabber.Frontend
         private const string RuntimeMonthlyEventsFileName = "runtime_monthly_events.jsonl";
         private const string RuntimeEventOptionsFileName = "runtime_event_options.jsonl";
         private const string RuntimeMonthlyEventOptionsFileName = "runtime_monthly_event_options.jsonl";
-        private const string RuntimeMonthlyEventWindowsFileName = "runtime_monthly_event_windows.jsonl";
-        private const string RuntimeMonthlyEventFlowFileName = "runtime_monthly_event_flow.jsonl";
-        private const string RuntimeMonthlyEventCandidatesFileName = "runtime_monthly_event_candidates.jsonl";
 
         private static bool _discoveryMode = true;
         private static bool _dumpToJson = true;
@@ -34,11 +31,6 @@ namespace RuntimeInfoGrabber.Frontend
         private static string _dumpDirectoryName = "Dump_out";
         private static string _lastEventOptionsSignature = string.Empty;
         private static string _lastMonthlyEventOptionsSignature = string.Empty;
-        private static string _lastMonthlyEventWindowSignature = string.Empty;
-        private static string _lastMonthlyEventFlowSignature = string.Empty;
-        private static string _lastMonthlyEventCandidateSignature = string.Empty;
-        private static int _flowSequence;
-        private static DateTime _lastMonthlyCollectionObservedAt = DateTime.MinValue;
         private static readonly HashSet<string> _monthlyEventGuids = new HashSet<string>();
         private static readonly Dictionary<string, List<MonthlyEventItem>> _monthlyEventsByGuid = new Dictionary<string, List<MonthlyEventItem>>();
         private static readonly Dictionary<string, List<string>> _recentMonthlyEventContextsByGuid = new Dictionary<string, List<string>>();
@@ -51,17 +43,17 @@ namespace RuntimeInfoGrabber.Frontend
 
         public static void InstallPatches(Harmony harmony)
         {
-            Type? monthNotifyType = FindTypeBySimpleName("UI_MonthNotify");
+            Type monthNotifyType = AccessTools.TypeByName("UI_MonthNotify");
             if (monthNotifyType == null)
             {
-                AdaptableLog.Warning("[RuntimeInfoGrabber] UI_MonthNotify type not found; monthly event runtime dump is disabled.");
+                AdaptableLog.Warning("[AutoMonthlyEvent] UI_MonthNotify type not found; monthly event runtime dump is disabled.");
             }
             else
             {
                 var onNotifyGameData = AccessTools.Method(monthNotifyType, "OnNotifyGameData");
                 if (onNotifyGameData == null)
                 {
-                    AdaptableLog.Warning("[RuntimeInfoGrabber] UI_MonthNotify.OnNotifyGameData not found; monthly event runtime dump is disabled.");
+                    AdaptableLog.Warning("[AutoMonthlyEvent] UI_MonthNotify.OnNotifyGameData not found; monthly event runtime dump is disabled.");
                 }
                 else
                 {
@@ -73,7 +65,7 @@ namespace RuntimeInfoGrabber.Frontend
             var eventModelNotify = AccessTools.Method(typeof(EventModel), "OnNotifyGameData");
             if (eventModelNotify == null)
             {
-                AdaptableLog.Warning("[RuntimeInfoGrabber] EventModel.OnNotifyGameData not found; event option runtime dump is disabled.");
+                AdaptableLog.Warning("[AutoMonthlyEvent] EventModel.OnNotifyGameData not found; event option runtime dump is disabled.");
             }
             else
             {
@@ -88,7 +80,7 @@ namespace RuntimeInfoGrabber.Frontend
             {
                 if (!File.Exists(ConfigFilePath))
                 {
-                    AdaptableLog.Warning($"[RuntimeInfoGrabber] Config not found at {ConfigFilePath}; using discovery defaults.");
+                    AdaptableLog.Warning($"[AutoMonthlyEvent] Config not found at {ConfigFilePath}; using discovery defaults.");
                     return;
                 }
 
@@ -100,11 +92,11 @@ namespace RuntimeInfoGrabber.Frontend
                 if (string.IsNullOrWhiteSpace(_dumpDirectoryName))
                     _dumpDirectoryName = "Dump_out";
 
-                AdaptableLog.Info($"[RuntimeInfoGrabber] Discovery config loaded. DiscoveryMode={_discoveryMode}, DumpToJson={_dumpToJson}, DumpDirectory={_dumpDirectoryName}");
+                AdaptableLog.Info($"[AutoMonthlyEvent] Discovery config loaded. DiscoveryMode={_discoveryMode}, DumpToJson={_dumpToJson}, DumpDirectory={_dumpDirectoryName}");
             }
             catch (Exception ex)
             {
-                AdaptableLog.Error($"[RuntimeInfoGrabber] Failed to load discovery config: {ex}");
+                AdaptableLog.Error($"[AutoMonthlyEvent] Failed to load discovery config: {ex}");
             }
         }
 
@@ -127,11 +119,11 @@ namespace RuntimeInfoGrabber.Frontend
                 RefreshMonthlyEventGuidIndex();
                 File.WriteAllText(Path.Combine(DumpDirectoryPath, MonthlyCatalogFileName), BuildMonthlyEventsCatalogJson(), Encoding.UTF8);
                 File.WriteAllText(Path.Combine(DumpDirectoryPath, MonthlyEventGuidIndexFileName), BuildMonthlyEventGuidIndexJson(), Encoding.UTF8);
-                AdaptableLog.Info($"[RuntimeInfoGrabber] Static catalogs dumped to {DumpDirectoryPath}");
+                AdaptableLog.Info($"[AutoMonthlyEvent] Static catalogs dumped to {DumpDirectoryPath}");
             }
             catch (Exception ex)
             {
-                AdaptableLog.Error($"[RuntimeInfoGrabber] Failed to export static catalogs: {ex}");
+                AdaptableLog.Error($"[AutoMonthlyEvent] Failed to export static catalogs: {ex}");
             }
         }
 
@@ -158,7 +150,7 @@ namespace RuntimeInfoGrabber.Frontend
             }
             catch (Exception ex)
             {
-                AdaptableLog.Error($"[RuntimeInfoGrabber] Failed to dump runtime monthly events: {ex}");
+                AdaptableLog.Error($"[AutoMonthlyEvent] Failed to dump runtime monthly events: {ex}");
             }
         }
 
@@ -175,57 +167,32 @@ namespace RuntimeInfoGrabber.Frontend
 
                 EnsureMonthlyEventGuidIndex();
                 string signature = BuildEventOptionsSignature(data);
-                bool isMonthlyGuid = _monthlyEventGuids.Contains(data.EventGuid);
-                bool nearMonthly = IsNearMonthlyProcess();
-                string candidateType = GetMonthlyEventCandidateType(data);
-                bool isCandidate = !string.IsNullOrEmpty(candidateType);
-                string candidateReason = isCandidate ? BuildMonthlyEventCandidateReason(data, candidateType) : string.Empty;
-
                 if (signature != _lastEventOptionsSignature)
                 {
                     _lastEventOptionsSignature = signature;
-                    string line = BuildEventOptionsJsonLine(data, isMonthlyGuid, nearMonthly, isCandidate, candidateType, candidateReason);
+                    string line = BuildEventOptionsJsonLine(data);
                     AppendLine(RuntimeEventOptionsFileName, line);
 
                     if (_logVerbose)
-                        AdaptableLog.Info($"[RuntimeInfoGrabber] Event options dumped. EventGuid={data.EventGuid}, Options={data.EventOptionInfos?.Count ?? 0}");
+                        AdaptableLog.Info($"[AutoMonthlyEvent] Event options dumped. EventGuid={data.EventGuid}, Options={data.EventOptionInfos?.Count ?? 0}");
                 }
 
-                if (isMonthlyGuid && signature != _lastMonthlyEventOptionsSignature)
+                if (_monthlyEventGuids.Contains(data.EventGuid) && signature != _lastMonthlyEventOptionsSignature)
                 {
                     _lastMonthlyEventOptionsSignature = signature;
                     AppendLine(RuntimeMonthlyEventOptionsFileName, BuildMonthlyEventOptionsJsonLine(data));
 
-                    AdaptableLog.Info($"[RuntimeInfoGrabber] Monthly event options dumped. EventGuid={data.EventGuid}, Options={data.EventOptionInfos?.Count ?? 0}");
-                }
-
-                if (isMonthlyGuid && signature != _lastMonthlyEventWindowSignature)
-                {
-                    _lastMonthlyEventWindowSignature = signature;
-                    AppendLine(RuntimeMonthlyEventWindowsFileName, BuildMonthlyEventWindowJsonLine(data, isMonthlyGuid, nearMonthly));
-                }
-
-                if (isCandidate && signature != _lastMonthlyEventCandidateSignature)
-                {
-                    _lastMonthlyEventCandidateSignature = signature;
-                    AppendLine(RuntimeMonthlyEventCandidatesFileName, BuildMonthlyEventCandidateJsonLine(data, candidateType, candidateReason, nearMonthly));
-                }
-
-                if ((isMonthlyGuid || nearMonthly || isCandidate) && signature != _lastMonthlyEventFlowSignature)
-                {
-                    _lastMonthlyEventFlowSignature = signature;
-                    AppendLine(RuntimeMonthlyEventFlowFileName, BuildMonthlyEventFlowJsonLine(data, isMonthlyGuid, nearMonthly, isCandidate, candidateType, candidateReason));
+                    AdaptableLog.Info($"[AutoMonthlyEvent] Monthly event options dumped. EventGuid={data.EventGuid}, Options={data.EventOptionInfos?.Count ?? 0}");
                 }
             }
             catch (Exception ex)
             {
-                AdaptableLog.Error($"[RuntimeInfoGrabber] Failed to dump runtime event options: {ex}");
+                AdaptableLog.Error($"[AutoMonthlyEvent] Failed to dump runtime event options: {ex}");
             }
         }
 
         private static void DumpMonthlyEventCollection(MonthlyEventCollection collection)
         {
-            _lastMonthlyCollectionObservedAt = DateTime.Now;
             var renderInfos = new List<MonthlyEventRenderInfo>();
             var arguments = new ArgumentCollection();
             collection.GetRenderInfos(renderInfos, arguments);
@@ -236,8 +203,7 @@ namespace RuntimeInfoGrabber.Frontend
                 string line = BuildRuntimeMonthlyEventJsonLine(info, item);
                 AppendLine(RuntimeMonthlyEventsFileName, line);
                 RememberMonthlyEventContext(info.EventGuid, line);
-                AppendLine(RuntimeMonthlyEventFlowFileName, BuildMonthlyEventFlowJsonLine(info, item));
-                AdaptableLog.Info($"[RuntimeInfoGrabber] MonthlyEvent offset={info.Offset}, recordType={info.RecordType}, type={item?.Type.ToString() ?? "Unknown"}, eventGuid={info.EventGuid}");
+                AdaptableLog.Info($"[AutoMonthlyEvent] MonthlyEvent offset={info.Offset}, recordType={info.RecordType}, type={item?.Type.ToString() ?? "Unknown"}, eventGuid={info.EventGuid}");
             }
         }
 
@@ -260,31 +226,6 @@ namespace RuntimeInfoGrabber.Frontend
 
                 items.Add(item);
             }
-        }
-
-        private static Type? FindTypeBySimpleName(string typeName)
-        {
-            Type? type = AccessTools.TypeByName(typeName);
-            if (type != null)
-                return type;
-
-            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
-            {
-                try
-                {
-                    foreach (Type candidate in assembly.GetTypes())
-                    {
-                        if (candidate.Name == typeName || candidate.FullName == typeName)
-                            return candidate;
-                    }
-                }
-                catch
-                {
-                    // Some Unity/runtime assemblies can fail type enumeration; skip them.
-                }
-            }
-
-            return null;
         }
 
         private static void EnsureMonthlyEventGuidIndex()
@@ -383,27 +324,12 @@ namespace RuntimeInfoGrabber.Frontend
             return sb.ToString();
         }
 
-        private static string BuildEventOptionsJsonLine(
-            TaiwuEventDisplayData data,
-            bool isMonthlyEventGuid,
-            bool nearMonthlyProcess,
-            bool isMonthlyEventCandidate,
-            string candidateType,
-            string candidateReason)
+        private static string BuildEventOptionsJsonLine(TaiwuEventDisplayData data)
         {
             var sb = new StringBuilder();
             sb.Append("{");
             AppendJsonProperty(sb, "timestamp", Timestamp(), false);
             AppendJsonProperty(sb, "eventGuid", data.EventGuid, true);
-            AppendJsonProperty(sb, "isMonthlyEventGuid", isMonthlyEventGuid, true);
-            AppendJsonProperty(sb, "nearMonthlyProcess", nearMonthlyProcess, true);
-            AppendJsonProperty(sb, "isMonthlyEventCandidate", isMonthlyEventCandidate, true);
-            AppendJsonProperty(sb, "candidateType", candidateType, true);
-            AppendJsonProperty(sb, "candidateReason", candidateReason, true);
-            AppendJsonProperty(sb, "classification", ClassifyEventWindow(data, isMonthlyEventGuid, nearMonthlyProcess, isMonthlyEventCandidate, candidateType), true);
-            AppendJsonProperty(sb, "stage", InferEventWindowStage(data), true);
-            AppendJsonProperty(sb, "optionCount", data.EventOptionInfos?.Count ?? 0, true);
-            AppendJsonProperty(sb, "hasOptions", (data.EventOptionInfos?.Count ?? 0) > 0, true);
             AppendJsonProperty(sb, "eventContent", data.EventContent, true);
             AppendJsonProperty(sb, "mainCharacterId", data.MainCharacter?.CharacterId ?? -1, true);
             AppendJsonProperty(sb, "targetCharacterId", data.TargetCharacter?.CharacterId ?? -1, true);
@@ -425,110 +351,6 @@ namespace RuntimeInfoGrabber.Frontend
             }
 
             sb.Append("]}");
-            return sb.ToString();
-        }
-
-        private static string BuildMonthlyEventCandidateJsonLine(TaiwuEventDisplayData data, string candidateType, string candidateReason, bool nearMonthlyProcess)
-        {
-            var sb = new StringBuilder();
-            sb.Append("{");
-            AppendJsonProperty(sb, "timestamp", Timestamp(), false);
-            AppendJsonProperty(sb, "sequenceId", NextFlowSequence(), true);
-            AppendJsonProperty(sb, "source", "EventModel", true);
-            AppendJsonProperty(sb, "eventGuid", data.EventGuid, true);
-            AppendJsonProperty(sb, "isMonthlyEventGuid", false, true);
-            AppendJsonProperty(sb, "nearMonthlyProcess", nearMonthlyProcess, true);
-            AppendJsonProperty(sb, "isMonthlyEventCandidate", true, true);
-            AppendJsonProperty(sb, "candidateType", candidateType, true);
-            AppendJsonProperty(sb, "candidateReason", candidateReason, true);
-            AppendJsonProperty(sb, "classification", ClassifyEventWindow(data, false, nearMonthlyProcess, true, candidateType), true);
-            AppendJsonProperty(sb, "stage", InferEventWindowStage(data), true);
-            AppendJsonProperty(sb, "optionCount", data.EventOptionInfos?.Count ?? 0, true);
-            AppendJsonProperty(sb, "hasOptions", (data.EventOptionInfos?.Count ?? 0) > 0, true);
-            AppendJsonProperty(sb, "eventContent", data.EventContent, true);
-            AppendJsonProperty(sb, "mainCharacterId", data.MainCharacter?.CharacterId ?? -1, true);
-            AppendJsonProperty(sb, "targetCharacterId", data.TargetCharacter?.CharacterId ?? -1, true);
-            AppendEventOptionsArrayProperty(sb, data, true);
-            sb.Append("}");
-            return sb.ToString();
-        }
-
-        private static string BuildMonthlyEventWindowJsonLine(TaiwuEventDisplayData data, bool isMonthlyEventGuid, bool nearMonthlyProcess)
-        {
-            var sb = new StringBuilder();
-            sb.Append("{");
-            AppendJsonProperty(sb, "timestamp", Timestamp(), false);
-            AppendJsonProperty(sb, "sequenceId", NextFlowSequence(), true);
-            AppendJsonProperty(sb, "source", "EventModel", true);
-            AppendJsonProperty(sb, "eventGuid", data.EventGuid, true);
-            AppendJsonProperty(sb, "isMonthlyEventGuid", isMonthlyEventGuid, true);
-            AppendJsonProperty(sb, "nearMonthlyProcess", nearMonthlyProcess, true);
-            AppendJsonProperty(sb, "classification", ClassifyEventWindow(data, isMonthlyEventGuid, nearMonthlyProcess, false, string.Empty), true);
-            AppendJsonProperty(sb, "stage", InferEventWindowStage(data), true);
-            AppendJsonProperty(sb, "optionCount", data.EventOptionInfos?.Count ?? 0, true);
-            AppendJsonProperty(sb, "hasOptions", (data.EventOptionInfos?.Count ?? 0) > 0, true);
-            AppendJsonProperty(sb, "eventContent", data.EventContent, true);
-            AppendJsonProperty(sb, "mainCharacterId", data.MainCharacter?.CharacterId ?? -1, true);
-            AppendJsonProperty(sb, "targetCharacterId", data.TargetCharacter?.CharacterId ?? -1, true);
-            AppendEventOptionsArrayProperty(sb, data, true);
-            AppendMonthlyEventSummariesProperty(sb, "matchedMonthlyEvents", data.EventGuid, true);
-            AppendRecentMonthlyEventContextsProperty(sb, "recentRuntimeMonthlyEvents", data.EventGuid, true);
-            sb.Append("}");
-            return sb.ToString();
-        }
-
-        private static string BuildMonthlyEventFlowJsonLine(
-            TaiwuEventDisplayData data,
-            bool isMonthlyEventGuid,
-            bool nearMonthlyProcess,
-            bool isMonthlyEventCandidate,
-            string candidateType,
-            string candidateReason)
-        {
-            var sb = new StringBuilder();
-            sb.Append("{");
-            AppendJsonProperty(sb, "timestamp", Timestamp(), false);
-            AppendJsonProperty(sb, "sequenceId", NextFlowSequence(), true);
-            AppendJsonProperty(sb, "source", "EventModel", true);
-            AppendJsonProperty(sb, "eventGuid", data.EventGuid, true);
-            AppendJsonProperty(sb, "isMonthlyEventGuid", isMonthlyEventGuid, true);
-            AppendJsonProperty(sb, "nearMonthlyProcess", nearMonthlyProcess, true);
-            AppendJsonProperty(sb, "isMonthlyEventCandidate", isMonthlyEventCandidate, true);
-            AppendJsonProperty(sb, "candidateType", candidateType, true);
-            AppendJsonProperty(sb, "candidateReason", candidateReason, true);
-            AppendJsonProperty(sb, "classification", ClassifyEventWindow(data, isMonthlyEventGuid, nearMonthlyProcess, isMonthlyEventCandidate, candidateType), true);
-            AppendJsonProperty(sb, "stage", InferEventWindowStage(data), true);
-            AppendJsonProperty(sb, "optionCount", data.EventOptionInfos?.Count ?? 0, true);
-            AppendJsonProperty(sb, "hasOptions", (data.EventOptionInfos?.Count ?? 0) > 0, true);
-            AppendJsonProperty(sb, "eventContent", data.EventContent, true);
-            AppendEventOptionsArrayProperty(sb, data, true);
-            AppendMonthlyEventSummariesProperty(sb, "matchedMonthlyEvents", data.EventGuid, true);
-            sb.Append("}");
-            return sb.ToString();
-        }
-
-        private static string BuildMonthlyEventFlowJsonLine(MonthlyEventRenderInfo info, MonthlyEventItem? item)
-        {
-            var sb = new StringBuilder();
-            sb.Append("{");
-            AppendJsonProperty(sb, "timestamp", Timestamp(), false);
-            AppendJsonProperty(sb, "sequenceId", NextFlowSequence(), true);
-            AppendJsonProperty(sb, "source", "MonthlyEventCollection", true);
-            AppendJsonProperty(sb, "eventGuid", info.EventGuid, true);
-            AppendJsonProperty(sb, "isMonthlyEventGuid", !string.IsNullOrEmpty(info.EventGuid), true);
-            AppendJsonProperty(sb, "nearMonthlyProcess", true, true);
-            AppendJsonProperty(sb, "classification", "monthlyListItem", true);
-            AppendJsonProperty(sb, "stage", "monthlyList", true);
-            AppendJsonProperty(sb, "offset", info.Offset, true);
-            AppendJsonProperty(sb, "recordType", info.RecordType, true);
-            AppendJsonProperty(sb, "templateId", item?.TemplateId ?? -1, true);
-            AppendJsonProperty(sb, "name", item?.Name, true);
-            AppendJsonProperty(sb, "type", item?.Type.ToString(), true);
-            AppendJsonProperty(sb, "desc", item?.Desc, true);
-            AppendJsonProperty(sb, "text", info.Text, true);
-            AppendJsonArrayProperty(sb, "parameters", item?.Parameters, true);
-            AppendRenderArgumentsProperty(sb, "arguments", info.Arguments, true);
-            sb.Append("}");
             return sb.ToString();
         }
 
@@ -578,126 +400,6 @@ namespace RuntimeInfoGrabber.Frontend
             contexts.Add(jsonLine);
             while (contexts.Count > 20)
                 contexts.RemoveAt(0);
-        }
-
-        private static bool IsNearMonthlyProcess()
-        {
-            return _lastMonthlyCollectionObservedAt != DateTime.MinValue
-                && (DateTime.Now - _lastMonthlyCollectionObservedAt).TotalSeconds <= 180;
-        }
-
-        private static int NextFlowSequence()
-        {
-            _flowSequence++;
-            return _flowSequence;
-        }
-
-        private static string GetMonthlyEventCandidateType(TaiwuEventDisplayData data)
-        {
-            string text = BuildSearchText(data);
-
-            if (ContainsAny(text, "解囊相助", "希望太吾", "希望能解�?, "身陷困窘", "赠予")
-                && ContainsAny(text, "银钱", "木材", "金石", "织物", "药材", "食材"))
-                return "resourceRequest";
-
-            if (ContainsAny(text, "赠予")
-                && ContainsAny(text, "�?, "�?, "茶酒", "蒙顶黄芽", "郁结难疏", "缓郁�?))
-                return "teaWineOrItemRequest";
-
-            if (ContainsAny(text, "切磋", "比试一�?, "愿与你比�?, "同意切磋"))
-                return "sparringRequest";
-
-            if (ContainsAny(text, "挑战", "接受挑战", "婉言拒绝")
-                && ContainsAny(text, "比武", "较艺", "切磋", "挑战"))
-                return "challengeOrContestRequest";
-
-            if (ContainsAny(text, "说与你听", "获得了一些历�?, "江湖之事", "心有所�?))
-                return "guidanceResult";
-
-            if (ContainsAny(text, "甚是感动", "关系似乎又亲�?, "颇感失望", "转身离去", "只好如此"))
-                return "requestResult";
-
-            return string.Empty;
-        }
-
-        private static string BuildMonthlyEventCandidateReason(TaiwuEventDisplayData data, string candidateType)
-        {
-            int optionCount = data.EventOptionInfos?.Count ?? 0;
-            switch (candidateType)
-            {
-                case "resourceRequest":
-                    return $"matched resource request wording; options={optionCount}";
-                case "teaWineOrItemRequest":
-                    return $"matched tea/wine/item request wording; options={optionCount}";
-                case "sparringRequest":
-                    return $"matched sparring request wording; options={optionCount}";
-                case "challengeOrContestRequest":
-                    return $"matched challenge/contest request wording; options={optionCount}";
-                case "guidanceResult":
-                    return $"matched guidance/experience result wording; options={optionCount}";
-                case "requestResult":
-                    return $"matched request accept/reject result wording; options={optionCount}";
-                default:
-                    return $"matched candidate wording; options={optionCount}";
-            }
-        }
-
-        private static string BuildSearchText(TaiwuEventDisplayData data)
-        {
-            var sb = new StringBuilder();
-            if (!string.IsNullOrEmpty(data.EventContent))
-                sb.Append(data.EventContent);
-
-            var options = data.EventOptionInfos;
-            for (int i = 0; i < (options?.Count ?? 0); i++)
-            {
-                sb.Append('\n');
-                sb.Append(options![i].OptionContent);
-                sb.Append('\n');
-                sb.Append(options[i].OptionKey);
-            }
-
-            return sb.ToString();
-        }
-
-        private static bool ContainsAny(string text, params string[] values)
-        {
-            if (string.IsNullOrEmpty(text))
-                return false;
-
-            foreach (string value in values)
-            {
-                if (text.IndexOf(value, StringComparison.Ordinal) >= 0)
-                    return true;
-            }
-
-            return false;
-        }
-
-        private static string ClassifyEventWindow(
-            TaiwuEventDisplayData data,
-            bool isMonthlyEventGuid,
-            bool nearMonthlyProcess,
-            bool isMonthlyEventCandidate,
-            string candidateType)
-        {
-            if (isMonthlyEventGuid)
-                return "monthlyEventGuid";
-            if (isMonthlyEventCandidate)
-                return "monthlyEventCandidate:" + candidateType;
-            if (nearMonthlyProcess)
-                return "nearMonthlyProcess";
-            return "genericEvent";
-        }
-
-        private static string InferEventWindowStage(TaiwuEventDisplayData data)
-        {
-            int optionCount = data.EventOptionInfos?.Count ?? 0;
-            if (optionCount <= 0)
-                return "resultOrNotification";
-            if (optionCount == 1)
-                return "singleChoiceOrContinue";
-            return "promptOrChoice";
         }
 
         private static void AppendMonthlyEventSummaryObject(StringBuilder sb, MonthlyEventItem item)

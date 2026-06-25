@@ -5,50 +5,51 @@
     <RootNamespace>RuntimeInfoGrabber.Frontend</RootNamespace>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
+    <TaiwuDir>A:\SteamLibrary\steamapps\common\The Scroll Of Taiwu</TaiwuDir>
   </PropertyGroup>
 
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
-      <HintPath>$(TaiwuGameDir)\The Scroll of Taiwu_Data\Managed\Assembly-CSharp.dll</HintPath>
+      <HintPath>$(TaiwuDir)\The Scroll of Taiwu_Data\Managed\Assembly-CSharp.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="GameData.Shared">
-      <HintPath>$(TaiwuGameDir)\The Scroll of Taiwu_Data\Managed\GameData.Shared.dll</HintPath>
+      <HintPath>$(TaiwuDir)\The Scroll of Taiwu_Data\Managed\GameData.Shared.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="GameData.Utilities">
-      <HintPath>$(TaiwuGameDir)\The Scroll of Taiwu_Data\Managed\GameData.Utilities.dll</HintPath>
+      <HintPath>$(TaiwuDir)\The Scroll of Taiwu_Data\Managed\GameData.Utilities.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="GameData.Utilities.Structure">
-      <HintPath>$(TaiwuGameDir)\The Scroll of Taiwu_Data\Managed\GameData.Utilities.Structure.dll</HintPath>
+      <HintPath>$(TaiwuDir)\The Scroll of Taiwu_Data\Managed\GameData.Utilities.Structure.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="0Harmony">
-      <HintPath>$(TaiwuGameDir)\The Scroll of Taiwu_Data\Managed\0Harmony.dll</HintPath>
+      <HintPath>$(TaiwuDir)\The Scroll of Taiwu_Data\Managed\0Harmony.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine">
-      <HintPath>$(TaiwuGameDir)\The Scroll of Taiwu_Data\Managed\UnityEngine.dll</HintPath>
+      <HintPath>$(TaiwuDir)\The Scroll of Taiwu_Data\Managed\UnityEngine.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
-      <HintPath>$(TaiwuGameDir)\The Scroll of Taiwu_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+      <HintPath>$(TaiwuDir)\The Scroll of Taiwu_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.UI">
-      <HintPath>$(TaiwuGameDir)\The Scroll of Taiwu_Data\Managed\UnityEngine.UI.dll</HintPath>
+      <HintPath>$(TaiwuDir)\The Scroll of Taiwu_Data\Managed\UnityEngine.UI.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Unity.TextMeshPro">
-      <HintPath>$(TaiwuGameDir)\The Scroll of Taiwu_Data\Managed\Unity.TextMeshPro.dll</HintPath>
+      <HintPath>$(TaiwuDir)\The Scroll of Taiwu_Data\Managed\Unity.TextMeshPro.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="TaiwuModdingLib">
-      <HintPath>$(TaiwuGameDir)\The Scroll of Taiwu_Data\Managed\TaiwuModdingLib.dll</HintPath>
+      <HintPath>$(TaiwuDir)\The Scroll of Taiwu_Data\Managed\TaiwuModdingLib.dll</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>
 
-  <Import Project="$(SolutionDir)mods\Taiwu.Mod.Plugin.Pack.targets" />
+  <Import Project="$(MSBuildThisFileDirectory)../../../Taiwu.Mod.Plugin.Pack.targets" />
 </Project>
