@@ -37,6 +37,22 @@
       <HintPath>$(TaiwuGameDir)\The Scroll of Taiwu_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>$(TaiwuGameDir)\The Scroll of Taiwu_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>$(TaiwuGameDir)\The Scroll of Taiwu_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(TaiwuGameDir)\The Scroll of Taiwu_Data\Managed\UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.TextMeshPro">
+      <HintPath>$(TaiwuGameDir)\The Scroll of Taiwu_Data\Managed\Unity.TextMeshPro.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="TaiwuModdingLib">
       <HintPath>$(TaiwuGameDir)\The Scroll of Taiwu_Data\Managed\TaiwuModdingLib.dll</HintPath>
       <Private>false</Private>

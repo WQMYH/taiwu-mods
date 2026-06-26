@@ -26,10 +26,12 @@ namespace AutoMonthlyEvent.Executor.Frontend
         private bool _enableFrontendRememberSelection = false;
         private bool _enableFrontendMemorySelect = false;
         private bool _enableFrontendSingleOptionContinue = false;
+        private bool _enableAnySingleOptionContinue = false;
         public bool EnableFrontendKeywordSelect => EnableFrontendAutoSelectCategory && _enableFrontendKeywordSelect;
         public bool EnableFrontendRememberSelection => _enableFrontendRememberSelection;
         public bool EnableFrontendMemorySelect => EnableFrontendAutoSelectCategory && _enableFrontendMemorySelect;
         public bool EnableFrontendSingleOptionContinue => EnableFrontendAutoSelectCategory && _enableFrontendSingleOptionContinue;
+        public bool EnableAnySingleOptionContinue => EnableFrontendAutoSelectCategory && _enableAnySingleOptionContinue;
         private bool _autoContinueWhitelistedResults = false;
         public bool AutoContinueWhitelistedResults => EnableResultCategory && _autoContinueWhitelistedResults;
         public string RequestDirection { get; private set; } = "NpcToTaiwu";
@@ -43,6 +45,7 @@ namespace AutoMonthlyEvent.Executor.Frontend
         private bool _enableAdoptAbandonedBaby = false;
         private bool _enablePrenatalEducation = false;
         private bool _enablePrenatalEducationResultContinue = false;
+        private bool _enableBirthNaming = false;
         public bool EnableMonthlyRequest => EnableRequestCategory && _enableMonthlyRequest;
         public bool EnableResourceRequest => EnableRequestCategory && _enableResourceRequest;
         public bool EnableTeaWineItemRequest => EnableRequestCategory && _enableTeaWineItemRequest;
@@ -51,8 +54,17 @@ namespace AutoMonthlyEvent.Executor.Frontend
         public bool EnableAdoptAbandonedBaby => EnableFamilyCategory && _enableAdoptAbandonedBaby;
         public bool EnablePrenatalEducation => EnableFamilyCategory && _enablePrenatalEducation;
         public bool EnablePrenatalEducationResultContinue => EnableFamilyCategory && _enablePrenatalEducation && _enablePrenatalEducationResultContinue;
+        public bool EnableBirthNaming => EnableFamilyCategory && _enableBirthNaming;
         public int PrenatalEducationChoice { get; private set; } = 3;
         public int AdoptionMaxChildAge { get; private set; } = 3;
+        public bool TaiwuBirthUseOwnSurname { get; private set; } = true;
+        public bool PartnerBirthUseMotherSurname { get; private set; } = false;
+        public bool BirthFallbackManualNaming { get; private set; } = false;
+        public string BirthGenerationCharacter { get; private set; } = string.Empty;
+        public string BirthGivenNameSuffix { get; private set; } = string.Empty;
+        public bool EnablePresetCustomDialogSkip { get; private set; } = false;
+        public bool EnableCustomDialogSkip { get; private set; } = false;
+        public string CustomDialogSkipSuspendHotkey { get; private set; } = "Ctrl+A";
         public bool EnableActionLog { get; private set; } = true;
         public bool EnableDebugLog { get; private set; } = true;
         public string LogDirectory { get; private set; } = "Logs";
@@ -116,6 +128,7 @@ namespace AutoMonthlyEvent.Executor.Frontend
             config._enableFrontendRememberSelection = ReadBool(content, nameof(EnableFrontendRememberSelection), config._enableFrontendRememberSelection);
             config._enableFrontendMemorySelect = ReadBool(content, nameof(EnableFrontendMemorySelect), config._enableFrontendMemorySelect);
             config._enableFrontendSingleOptionContinue = ReadBool(content, nameof(EnableFrontendSingleOptionContinue), config._enableFrontendSingleOptionContinue);
+            config._enableAnySingleOptionContinue = ReadBool(content, nameof(EnableAnySingleOptionContinue), config._enableAnySingleOptionContinue);
             config._autoContinueWhitelistedResults = ReadBool(content, nameof(AutoContinueWhitelistedResults), config._autoContinueWhitelistedResults);
             config.RequestDirection = ReadString(content, nameof(RequestDirection), config.RequestDirection);
             config.RequestRelationMode = NormalizeRequestRelationMode(ReadInt(content, nameof(RequestRelationMode), config.RequestRelationMode));
@@ -129,8 +142,17 @@ namespace AutoMonthlyEvent.Executor.Frontend
             config._enableAdoptAbandonedBaby = ReadBool(content, nameof(EnableAdoptAbandonedBaby), config._enableAdoptAbandonedBaby);
             config._enablePrenatalEducation = ReadBool(content, nameof(EnablePrenatalEducation), config._enablePrenatalEducation);
             config._enablePrenatalEducationResultContinue = ReadBool(content, nameof(EnablePrenatalEducationResultContinue), config._enablePrenatalEducationResultContinue);
+            config._enableBirthNaming = ReadBool(content, nameof(EnableBirthNaming), config._enableBirthNaming);
             config.PrenatalEducationChoice = NormalizePrenatalEducationChoice(ReadInt(content, nameof(PrenatalEducationChoice), config.PrenatalEducationChoice));
             config.AdoptionMaxChildAge = ReadInt(content, nameof(AdoptionMaxChildAge), config.AdoptionMaxChildAge);
+            config.TaiwuBirthUseOwnSurname = ReadBool(content, nameof(TaiwuBirthUseOwnSurname), config.TaiwuBirthUseOwnSurname);
+            config.PartnerBirthUseMotherSurname = ReadBool(content, nameof(PartnerBirthUseMotherSurname), config.PartnerBirthUseMotherSurname);
+            config.BirthFallbackManualNaming = ReadBool(content, nameof(BirthFallbackManualNaming), config.BirthFallbackManualNaming);
+            config.BirthGenerationCharacter = NormalizeOneChar(ReadString(content, nameof(BirthGenerationCharacter), config.BirthGenerationCharacter));
+            config.BirthGivenNameSuffix = NormalizeOneChar(ReadString(content, nameof(BirthGivenNameSuffix), config.BirthGivenNameSuffix));
+            config.EnablePresetCustomDialogSkip = ReadBool(content, nameof(EnablePresetCustomDialogSkip), config.EnablePresetCustomDialogSkip);
+            config.EnableCustomDialogSkip = ReadBool(content, nameof(EnableCustomDialogSkip), config.EnableCustomDialogSkip);
+            config.CustomDialogSkipSuspendHotkey = ReadString(content, nameof(CustomDialogSkipSuspendHotkey), config.CustomDialogSkipSuspendHotkey).Trim();
             config.EnableActionLog = ReadBool(content, nameof(EnableActionLog), config.EnableActionLog);
             config.EnableDebugLog = ReadBool(content, nameof(EnableDebugLog), config.EnableDebugLog);
             config.LogDirectory = SanitizeRelativePath(ReadString(content, nameof(LogDirectory), config.LogDirectory), "Logs");
@@ -259,6 +281,15 @@ namespace AutoMonthlyEvent.Executor.Frontend
                     return fallback;
             }
             return value;
+        }
+
+        private static string NormalizeOneChar(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return string.Empty;
+
+            value = value.Trim();
+            return value.Length <= 1 ? value : value.Substring(0, 1);
         }
     }
 }

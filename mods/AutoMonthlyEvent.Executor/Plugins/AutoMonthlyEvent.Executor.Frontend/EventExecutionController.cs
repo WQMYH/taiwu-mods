@@ -47,7 +47,25 @@ namespace AutoMonthlyEvent.Executor.Frontend
             string candidateType = EventClassifier.Classify(data);
             ActionLogger.Debug("observe", data.EventGuid ?? string.Empty, candidateType, BuildDebugSnapshot(data, signature));
 
-            if (!HandledSignatures.Add(signature))
+            if (config.EnableAutoExecute && config.EnableCustomDialogSkip
+                && FrontendAutoSelector.TryGetRememberedOption(signature, data, out string customOptionKey))
+            {
+                var customDecision = new EventDecision
+                {
+                    EventGuid = data.EventGuid ?? string.Empty,
+                    CandidateType = "customDialogSkip",
+                    Decision = config.DryRun ? "would reuse player custom dialog choice" : "reuse player custom dialog choice",
+                    OptionKey = customOptionKey,
+                    Reason = "Matched player custom dialog skip rule",
+                    DryRun = config.DryRun,
+                    Skipped = false
+                };
+                ActionLogger.Log(customDecision);
+                ExecuteOptionIfAllowed(eventModel, config, signature, customOptionKey, customDecision);
+                return;
+            }
+
+            if (HandledSignatures.Contains(signature))
             {
                 ActionLogger.Debug("dedupe", data.EventGuid ?? string.Empty, candidateType, "相同签名已处理，跳过重复窗口");
                 return;
@@ -55,12 +73,12 @@ namespace AutoMonthlyEvent.Executor.Frontend
 
             if (string.IsNullOrEmpty(candidateType))
             {
-                if (config.EnableAutoExecute && config.EnableFrontendMemorySelect && FrontendAutoSelector.TryGetRememberedOption(signature, data, out string rememberedOptionKey))
+                if (config.EnableAutoExecute && config.EnableCustomDialogSkip && FrontendAutoSelector.TryGetRememberedOption(signature, data, out string rememberedOptionKey))
                 {
                     var rememberedDecision = new EventDecision
                     {
                         EventGuid = data.EventGuid ?? string.Empty,
-                        CandidateType = "rememberedSelection",
+                        CandidateType = "customDialogSkip",
                         Decision = config.DryRun ? "将复用玩家选择" : "复用玩家选择",
                         OptionKey = rememberedOptionKey,
                         Reason = "严格签名命中玩家记忆选择",
@@ -107,6 +125,18 @@ namespace AutoMonthlyEvent.Executor.Frontend
             if (EventClassifier.IsPrenatalEducationResultType(candidateType))
             {
                 HandlePrenatalEducationResult(eventModel, config, data, signature);
+                return;
+            }
+
+            if (EventClassifier.IsBirthNamingType(candidateType))
+            {
+                HandleBirthNaming(eventModel, config, data, signature);
+                return;
+            }
+
+            if (EventClassifier.IsBirthNameInputType(candidateType))
+            {
+                HandleBirthNameInput(eventModel, config, data, signature);
                 return;
             }
 
@@ -174,6 +204,30 @@ namespace AutoMonthlyEvent.Executor.Frontend
 
         private static bool TryHandleFrontendSingleOption(EventModel eventModel, ExecutorConfig config, TaiwuEventDisplayData data, string signature, string candidateType, string reasonPrefix)
         {
+            if (config.EnableAnySingleOptionContinue)
+            {
+                if (!EventClassifier.TryFindAnySingleContinueOption(data, out EventOptionInfo anyOption, out string anyReason))
+                {
+                    ActionLogger.Debug("any-single-option-skip", data.EventGuid ?? string.Empty, "anySingleOptionContinue", anyReason);
+                    return false;
+                }
+
+                var anyDecision = new EventDecision
+                {
+                    EventGuid = data.EventGuid ?? string.Empty,
+                    CandidateType = "anySingleOptionContinue",
+                    Decision = config.DryRun ? "would skip any single option" : "skip any single option",
+                    OptionKey = anyOption.OptionKey ?? string.Empty,
+                    Reason = "Player enabled any single option skip",
+                    SummaryZh = $"所有单选项跳过：{anyOption.OptionContent}",
+                    DryRun = config.DryRun,
+                    Skipped = false
+                };
+                ActionLogger.Log(anyDecision);
+                ExecuteOptionIfAllowed(eventModel, config, signature, anyOption.OptionKey ?? string.Empty, anyDecision);
+                return true;
+            }
+
             if (!config.EnableFrontendSingleOptionContinue)
                 return false;
 
@@ -357,6 +411,92 @@ namespace AutoMonthlyEvent.Executor.Frontend
             ExecuteOptionIfAllowed(eventModel, config, signature, option.OptionKey ?? string.Empty, decision);
         }
 
+        private static void HandleBirthNaming(EventModel eventModel, ExecutorConfig config, TaiwuEventDisplayData data, string signature)
+        {
+            const string candidateType = EventClassifier.BirthNaming;
+            if (!config.EnableBirthNaming)
+            {
+                LogSkip(config, data, candidateType, "新生儿取名自动处理未启用");
+                return;
+            }
+
+            if (!EventClassifier.TryFindBirthNamingOption(data, config, out EventOptionInfo option, out string decisionKind, out string reason))
+            {
+                ActionLogger.Debug("birth-naming-option-failed", data.EventGuid ?? string.Empty, candidateType, reason + "；" + BuildOptionsText(data));
+                LogSkip(config, data, candidateType, reason);
+                return;
+            }
+
+            var decision = new EventDecision
+            {
+                EventGuid = data.EventGuid ?? string.Empty,
+                CandidateType = candidateType,
+                Decision = config.DryRun ? "将处理新生儿取名" : "处理新生儿取名",
+                OptionKey = option.OptionKey ?? string.Empty,
+                Reason = reason,
+                SummaryZh = $"新生儿取名：{decisionKind}；{option.OptionContent}",
+                DryRun = config.DryRun,
+                Skipped = false
+            };
+            ActionLogger.Log(decision);
+
+            ExecuteOptionIfAllowed(eventModel, config, signature, option.OptionKey ?? string.Empty, decision);
+        }
+
+        private static void HandleBirthNameInput(EventModel eventModel, ExecutorConfig config, TaiwuEventDisplayData data, string signature)
+        {
+            const string candidateType = EventClassifier.BirthNameInput;
+            if (!config.EnableBirthNaming)
+            {
+                LogSkip(config, data, candidateType, "新生儿取名自动处理未启用");
+                return;
+            }
+
+            string givenName = config.BirthGenerationCharacter + config.BirthGivenNameSuffix;
+            if (string.IsNullOrWhiteSpace(givenName))
+            {
+                LogSkip(config, data, candidateType, "未配置字辈与名尾，取名输入交给玩家");
+                return;
+            }
+
+            if (!EventClassifier.TryFindBirthNameInputConfirmOption(data, out EventOptionInfo option, out string reason))
+            {
+                ActionLogger.Debug("birth-name-input-option-failed", data.EventGuid ?? string.Empty, candidateType, reason + "；" + BuildOptionsText(data));
+                LogSkip(config, data, candidateType, reason);
+                return;
+            }
+
+            if (!config.DryRun)
+            {
+                try
+                {
+                    eventModel.SetInputResult(givenName);
+                    ActionLogger.Debug("birth-name-input-set", data.EventGuid ?? string.Empty, candidateType, $"已提交名字输入：{givenName}");
+                }
+                catch (Exception ex)
+                {
+                    ActionLogger.Debug("birth-name-input-exception", data.EventGuid ?? string.Empty, candidateType, ex.GetType().Name + ": " + ex.Message);
+                    LogSkip(config, data, candidateType, "提交名字输入失败，交给玩家处理");
+                    return;
+                }
+            }
+
+            var decision = new EventDecision
+            {
+                EventGuid = data.EventGuid ?? string.Empty,
+                CandidateType = candidateType,
+                Decision = config.DryRun ? "将提交新生儿名字" : "提交新生儿名字",
+                OptionKey = option.OptionKey ?? string.Empty,
+                Reason = $"按配置提交名：{givenName}",
+                SummaryZh = $"新生儿取名输入：{givenName}",
+                DryRun = config.DryRun,
+                Skipped = false
+            };
+            ActionLogger.Log(decision);
+
+            ExecuteOptionIfAllowed(eventModel, config, signature, option.OptionKey ?? string.Empty, decision);
+        }
+
         private static void HandleAdoption(EventModel eventModel, ExecutorConfig config, TaiwuEventDisplayData data, string signature)
         {
             const string candidateType = EventClassifier.AdoptAbandonedBaby;
@@ -436,6 +576,7 @@ namespace AutoMonthlyEvent.Executor.Frontend
             }
 
             ActionLogger.Debug("execute-enqueue-before", decision.EventGuid, decision.CandidateType, $"提交给 EventWindow.Update 延迟选择；option={optionKey}");
+            HandledSignatures.Add(signature);
             FrontendAutoSelector.Enqueue(signature, optionKey, decision);
         }
 

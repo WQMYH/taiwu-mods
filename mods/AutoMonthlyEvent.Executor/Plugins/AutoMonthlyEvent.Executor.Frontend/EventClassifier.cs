@@ -15,6 +15,8 @@ namespace AutoMonthlyEvent.Executor.Frontend
         public const string AdoptAbandonedBaby = "adoptAbandonedBaby";
         public const string PrenatalEducation = "prenatalEducation";
         public const string PrenatalEducationResult = "prenatalEducationResult";
+        public const string BirthNaming = "birthNaming";
+        public const string BirthNameInput = "birthNameInput";
         public const string SparringRequest = "sparringRequest";
         public const string ChallengeOrContestRequest = "challengeOrContestRequest";
         public const string AdventureOrStory = "adventureOrStory";
@@ -25,6 +27,12 @@ namespace AutoMonthlyEvent.Executor.Frontend
         private const string PrenatalEducationEventGuid = "a73cc160-a95d-42c3-b986-a0353df434f0";
         private const string PrenatalEducationResultEventGuid = "757f2f50-9ed0-406e-b753-b6e76b8e87b1";
         private const string PrenatalEducationResultExitOptionKey = "Option_-754469636";
+        private const string TaiwuBirthSonEventGuid = "a86f7e1e-921b-42b8-9555-dec674e2df25";
+        private const string TaiwuBirthDaughterEventGuid = "2425d411-1f0b-4482-b610-89ef5a7db33f";
+        private const string PartnerBirthSonEventGuid = "699239c9-8293-4b21-b479-daf07983156e";
+        private const string PartnerBirthDaughterEventGuid = "1612d6ee-f4fe-4ce1-9174-4fe434a8225a";
+        private const string BirthNameInputEventGuid = "95324b83-6ec0-412f-b013-7bbe9fc58c54";
+        private const string BirthNameInputConfirmOptionKey = "Option_859559829";
 
         private static readonly Dictionary<string, int> RequestTemplateIdsByGuid = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
         {
@@ -78,6 +86,12 @@ namespace AutoMonthlyEvent.Executor.Frontend
 
             if (string.Equals(eventGuid, PrenatalEducationResultEventGuid, StringComparison.OrdinalIgnoreCase))
                 return PrenatalEducationResult;
+
+            if (IsBirthNamingGuid(eventGuid))
+                return BirthNaming;
+
+            if (IsBirthNameInputGuid(eventGuid) || IsBirthNameInputEvent(data))
+                return BirthNameInput;
 
             if (string.Equals(eventGuid, AdoptAbandonedBabyEventGuid, StringComparison.OrdinalIgnoreCase)
                 || (ContainsAny(text, "收养弃婴") && ContainsAny(text, "收养至太吾村", "暂且搁置")))
@@ -135,6 +149,16 @@ namespace AutoMonthlyEvent.Executor.Frontend
         public static bool IsPrenatalEducationResultType(string candidateType)
         {
             return candidateType == PrenatalEducationResult;
+        }
+
+        public static bool IsBirthNamingType(string candidateType)
+        {
+            return candidateType == BirthNaming;
+        }
+
+        public static bool IsBirthNameInputType(string candidateType)
+        {
+            return candidateType == BirthNameInput;
         }
 
         public static int GetRequestTemplateId(TaiwuEventDisplayData data)
@@ -251,6 +275,152 @@ namespace AutoMonthlyEvent.Executor.Frontend
             return false;
         }
 
+        public static bool TryFindBirthNamingOption(
+            TaiwuEventDisplayData data,
+            ExecutorConfig config,
+            out EventOptionInfo option,
+            out string decisionKind,
+            out string reason)
+        {
+            option = default;
+            decisionKind = string.Empty;
+            reason = string.Empty;
+
+            if (data.EventOptionInfos == null)
+            {
+                reason = "缺少新生儿取名选项";
+                return false;
+            }
+
+            bool forceManualForGenerationName = !string.IsNullOrEmpty(config.BirthGenerationCharacter)
+                && !string.IsNullOrEmpty(config.BirthGivenNameSuffix);
+            EventOptionInfo manualOption = default;
+            EventOptionInfo ownSurnameOption = default;
+            EventOptionInfo motherSurnameOption = default;
+            bool hasManual = false;
+            bool hasOwnSurname = false;
+            bool hasMotherSurname = false;
+
+            foreach (EventOptionInfo current in data.EventOptionInfos)
+            {
+                if (current.OptionState != 0)
+                    continue;
+
+                string optionKey = current.OptionKey ?? string.Empty;
+                string content = current.OptionContent ?? string.Empty;
+                if (!hasManual
+                    && (optionKey == "Option_2068375462"
+                        || optionKey == "Option_1551600998"
+                        || ContainsAny(content, "亲自给孩子取个名字", "亲自取名")))
+                {
+                    manualOption = current;
+                    hasManual = true;
+                }
+                if (!hasOwnSurname
+                    && (optionKey == "Option_-1455740954"
+                        || ContainsAny(content, "以自己的姓氏给孩子取名")))
+                {
+                    ownSurnameOption = current;
+                    hasOwnSurname = true;
+                }
+                if (!hasMotherSurname
+                    && (optionKey == "Option_1008294433"
+                        || ContainsAny(content, "以母亲的姓氏给孩子取名")))
+                {
+                    motherSurnameOption = current;
+                    hasMotherSurname = true;
+                }
+            }
+
+            if (forceManualForGenerationName)
+            {
+                if (hasManual)
+                {
+                    option = manualOption;
+                    decisionKind = "manualForGenerationName";
+                    reason = "已配置字辈与名尾，进入亲自取名";
+                    return true;
+                }
+                reason = "已配置字辈与名尾，但没有可用的亲自取名选项";
+                return false;
+            }
+
+            string eventGuid = data.EventGuid ?? string.Empty;
+            if (IsTaiwuBirthGuid(eventGuid))
+            {
+                if (config.TaiwuBirthUseOwnSurname && hasOwnSurname)
+                {
+                    option = ownSurnameOption;
+                    decisionKind = "ownSurname";
+                    reason = "太吾本人生产，选择以自己的姓氏取名";
+                    return true;
+                }
+
+                if (config.BirthFallbackManualNaming && hasManual)
+                {
+                    option = manualOption;
+                    decisionKind = "manual";
+                    reason = "太吾本人生产，按配置进入亲自取名";
+                    return true;
+                }
+            }
+
+            if (IsPartnerBirthGuid(eventGuid))
+            {
+                if (config.PartnerBirthUseMotherSurname && hasMotherSurname)
+                {
+                    option = motherSurnameOption;
+                    decisionKind = "motherSurname";
+                    reason = "伴侣生产，选择以母亲姓氏取名";
+                    return true;
+                }
+
+                if (config.BirthFallbackManualNaming && hasManual)
+                {
+                    option = manualOption;
+                    decisionKind = "manual";
+                    reason = "伴侣生产，按配置进入亲自取名";
+                    return true;
+                }
+            }
+
+            reason = $"未命中新生儿取名规则：manual={hasManual}, ownSurname={hasOwnSurname}, motherSurname={hasMotherSurname}";
+            return false;
+        }
+
+        public static bool TryFindBirthNameInputConfirmOption(TaiwuEventDisplayData data, out EventOptionInfo option, out string reason)
+        {
+            option = default;
+            reason = string.Empty;
+
+            if (!IsBirthNameInputEvent(data))
+            {
+                reason = "当前事件不是新生儿取名输入";
+                return false;
+            }
+
+            if (data.EventOptionInfos == null)
+            {
+                reason = "缺少取名输入确认选项";
+                return false;
+            }
+
+            foreach (EventOptionInfo current in data.EventOptionInfos)
+            {
+                string content = current.OptionContent ?? string.Empty;
+                if (current.OptionState == 0
+                    && current.OptionKey == BirthNameInputConfirmOptionKey
+                    && ContainsAny(content, "确认输入"))
+                {
+                    option = current;
+                    return true;
+                }
+            }
+
+            reason = $"取名输入确认选项不可用：optionKey={BirthNameInputConfirmOptionKey}";
+            return false;
+        }
+
         public static bool TryFindContinueOption(TaiwuEventDisplayData data, out EventOptionInfo option, out string reason)
         {
             option = default;
@@ -326,6 +496,34 @@ namespace AutoMonthlyEvent.Executor.Frontend
             return true;
         }
 
+        public static bool TryFindAnySingleContinueOption(TaiwuEventDisplayData data, out EventOptionInfo option, out string reason)
+        {
+            option = default;
+            reason = string.Empty;
+
+            if (data.EventOptionInfos == null)
+            {
+                reason = "缺少事件选项";
+                return false;
+            }
+
+            if (HasBlockingExtraData(data))
+            {
+                reason = "事件包含输入框或额外选择器，不做所有单选项跳过";
+                return false;
+            }
+
+            List<EventOptionInfo> available = data.EventOptionInfos.Where(item => item.OptionState == 0).ToList();
+            if (available.Count != 1)
+            {
+                reason = $"可用选项数量不是 1：{available.Count}";
+                return false;
+            }
+
+            option = available[0];
+            return true;
+        }
+
         public static bool TryFindAdoptionOptions(TaiwuEventDisplayData data, out EventOptionInfo adoptOption, out EventOptionInfo postponeOption, out string reason)
         {
             adoptOption = default;
@@ -386,6 +584,36 @@ namespace AutoMonthlyEvent.Executor.Frontend
                     || extraData.SelectFameData != null);
         }
 
+        private static bool IsBirthNamingGuid(string eventGuid)
+        {
+            return IsTaiwuBirthGuid(eventGuid) || IsPartnerBirthGuid(eventGuid);
+        }
+
+        private static bool IsTaiwuBirthGuid(string eventGuid)
+        {
+            return string.Equals(eventGuid, TaiwuBirthSonEventGuid, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(eventGuid, TaiwuBirthDaughterEventGuid, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsPartnerBirthGuid(string eventGuid)
+        {
+            return string.Equals(eventGuid, PartnerBirthSonEventGuid, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(eventGuid, PartnerBirthDaughterEventGuid, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsBirthNameInputGuid(string eventGuid)
+        {
+            return string.Equals(eventGuid, BirthNameInputEventGuid, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsBirthNameInputEvent(TaiwuEventDisplayData data)
+        {
+            TaiwuEventDisplayExtraData? extraData = data.ExtraData;
+            return extraData?.InputRequestData != null
+                && extraData.InputRequestData.InputDataType == 3
+                && ContainsAny(data.EventContent ?? string.Empty, "输入孩子的名字", "给孩子取名");
+        }
+
         public static string BuildSignature(TaiwuEventDisplayData data)
         {
             string optionKeys = data.EventOptionInfos == null
@@ -395,6 +623,14 @@ namespace AutoMonthlyEvent.Executor.Frontend
             int mainId = data.MainCharacter?.CharacterId ?? -1;
             int targetId = data.TargetCharacter?.CharacterId ?? -1;
             return $"{data.EventGuid}|{optionKeys}|{mainId}|{targetId}|{StableHash(data.EventContent ?? string.Empty)}";
+        }
+
+        public static string BuildLooseSignature(TaiwuEventDisplayData data)
+        {
+            string optionKeys = data.EventOptionInfos == null
+                ? string.Empty
+                : string.Join("|", data.EventOptionInfos.Select(item => item.OptionKey ?? string.Empty));
+            return $"{data.EventGuid}|{optionKeys}";
         }
 
         private static string BuildSearchText(TaiwuEventDisplayData data)
