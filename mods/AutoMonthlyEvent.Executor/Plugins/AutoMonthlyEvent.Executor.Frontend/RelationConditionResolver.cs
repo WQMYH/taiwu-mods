@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using GameData.Domains.Character;
 using GameData.Domains.Character.Display;
 using GameData.GameDataBridge;
@@ -94,12 +95,28 @@ namespace AutoMonthlyEvent.Executor.Frontend
 
         private static bool IsAllowedRelation(ExecutorConfig config, ushort relationTypes)
         {
-            foreach (ushort allowed in config.AllowedRelationTypes)
+            foreach (ushort allowed in GetAllowedRelationTypes(config))
             {
                 if (allowed != 0 && (relationTypes & allowed) != 0)
                     return true;
             }
             return false;
+        }
+
+        private static IEnumerable<ushort> GetAllowedRelationTypes(ExecutorConfig config)
+        {
+            if (config.AllowedRelationTypes.Count > 0)
+                return config.AllowedRelationTypes;
+
+            switch (config.RequestRelationMode)
+            {
+                case 1:
+                    return new ushort[] { 1024, 1, 2 };
+                case 2:
+                    return new ushort[] { 1024, 1, 2, 64, 128, 512 };
+                default:
+                    return new ushort[] { 1024, 1, 2, 64, 128, 512, 8192 };
+            }
         }
 
         private static int GetTaiwuCharId()

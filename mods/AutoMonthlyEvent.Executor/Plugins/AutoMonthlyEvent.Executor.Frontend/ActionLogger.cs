@@ -10,12 +10,16 @@ namespace AutoMonthlyEvent.Executor.Frontend
         private static ExecutorConfig? _config;
         private static string _logFilePath = string.Empty;
         private static string _humanLogFilePath = string.Empty;
+        private static string _debugLogFilePath = string.Empty;
+        private static string _debugHumanLogFilePath = string.Empty;
 
         public static void Configure(ExecutorConfig config)
         {
             _config = config;
             _logFilePath = Path.Combine(config.ModDirectoryPath, config.LogDirectory, config.ActionLogFileName);
             _humanLogFilePath = Path.Combine(config.ModDirectoryPath, config.LogDirectory, config.HumanLogFileName);
+            _debugLogFilePath = Path.Combine(config.ModDirectoryPath, config.LogDirectory, config.DebugLogFileName);
+            _debugHumanLogFilePath = Path.Combine(config.ModDirectoryPath, config.LogDirectory, config.DebugHumanLogFileName);
         }
 
         public static void Log(EventDecision decision)
@@ -36,6 +40,35 @@ namespace AutoMonthlyEvent.Executor.Frontend
             catch (Exception ex)
             {
                 AdaptableLog.Error($"[AutoMonthlyEvent.Executor] Failed to write action log: {ex}");
+            }
+        }
+
+        public static void Debug(string stage, string eventGuid, string candidateType, string message)
+        {
+            ExecutorConfig? config = _config;
+            if (config == null || !config.EnableDebugLog)
+                return;
+
+            try
+            {
+                string? directory = Path.GetDirectoryName(_debugLogFilePath);
+                if (!string.IsNullOrEmpty(directory))
+                    Directory.CreateDirectory(directory);
+
+                string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
+                string json = "{"
+                    + $"\"timestamp\":\"{timestamp}\","
+                    + $"\"stage\":\"{Escape(stage)}\","
+                    + $"\"eventGuid\":\"{Escape(eventGuid)}\","
+                    + $"\"candidateType\":\"{Escape(candidateType)}\","
+                    + $"\"message\":\"{Escape(message)}\""
+                    + "}";
+                File.AppendAllText(_debugLogFilePath, json + Environment.NewLine, Encoding.UTF8);
+                File.AppendAllText(_debugHumanLogFilePath, $"[{timestamp}] 阶段={stage} 事件={eventGuid} 类型={candidateType} 信息={message}" + Environment.NewLine, Encoding.UTF8);
+            }
+            catch (Exception ex)
+            {
+                AdaptableLog.Error($"[AutoMonthlyEvent.Executor] Failed to write debug log: {ex}");
             }
         }
 

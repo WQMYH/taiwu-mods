@@ -20,6 +20,17 @@ if %errorlevel% neq 0 (
 )
 cd ..\..
 
+echo Building Backend...
+cd Plugins\AutoMonthlyEvent.Executor.Backend
+dotnet build -c Release
+if %errorlevel% neq 0 (
+    echo [FAILED] Backend build failed.
+    cd ..\..
+    exit /b 1
+)
+cd ..\..
+
 echo.
 echo [OK] Build completed.
 echo Output: Plugins\AutoMonthlyEvent.Executor.Frontend\bin\Release\netstandard2.1\
+echo Output: Plugins\AutoMonthlyEvent.Executor.Backend.dll

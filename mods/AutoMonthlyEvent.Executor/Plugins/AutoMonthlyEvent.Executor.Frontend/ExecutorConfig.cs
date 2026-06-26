@@ -16,19 +16,50 @@ namespace AutoMonthlyEvent.Executor.Frontend
         public bool EnableAutoExecute { get; private set; } = false;
         public bool DryRun { get; private set; } = false;
         public string UnknownPolicy { get; private set; } = "WaitPlayer";
-        public bool AutoContinueWhitelistedResults { get; private set; } = true;
+        public bool EnableRequestCategory { get; private set; } = false;
+        public bool EnableResultCategory { get; private set; } = false;
+        public bool EnableFamilyCategory { get; private set; } = false;
+        public bool EnableSocialContestCategory { get; private set; } = false;
+        public bool EnableFrontendAutoSelectCategory { get; private set; } = false;
+        public bool EnableBackendInterceptorCategory { get; private set; } = false;
+        private bool _enableFrontendKeywordSelect = false;
+        private bool _enableFrontendRememberSelection = false;
+        private bool _enableFrontendMemorySelect = false;
+        private bool _enableFrontendSingleOptionContinue = false;
+        public bool EnableFrontendKeywordSelect => EnableFrontendAutoSelectCategory && _enableFrontendKeywordSelect;
+        public bool EnableFrontendRememberSelection => _enableFrontendRememberSelection;
+        public bool EnableFrontendMemorySelect => EnableFrontendAutoSelectCategory && _enableFrontendMemorySelect;
+        public bool EnableFrontendSingleOptionContinue => EnableFrontendAutoSelectCategory && _enableFrontendSingleOptionContinue;
+        private bool _autoContinueWhitelistedResults = false;
+        public bool AutoContinueWhitelistedResults => EnableResultCategory && _autoContinueWhitelistedResults;
         public string RequestDirection { get; private set; } = "NpcToTaiwu";
+        public int RequestRelationMode { get; private set; } = 3;
         public int FallbackFavorabilityThreshold { get; private set; } = 15000;
-        public bool EnableResourceRequest { get; private set; } = true;
-        public bool EnableTeaWineItemRequest { get; private set; } = true;
-        public bool EnableRequestResultContinue { get; private set; } = true;
-        public bool EnableGuidanceResultContinue { get; private set; } = true;
-        public bool EnableAdoptAbandonedBaby { get; private set; } = true;
+        private bool _enableMonthlyRequest = false;
+        private bool _enableResourceRequest = false;
+        private bool _enableTeaWineItemRequest = false;
+        private bool _enableRequestResultContinue = false;
+        private bool _enableGuidanceResultContinue = false;
+        private bool _enableAdoptAbandonedBaby = false;
+        private bool _enablePrenatalEducation = false;
+        private bool _enablePrenatalEducationResultContinue = false;
+        public bool EnableMonthlyRequest => EnableRequestCategory && _enableMonthlyRequest;
+        public bool EnableResourceRequest => EnableRequestCategory && _enableResourceRequest;
+        public bool EnableTeaWineItemRequest => EnableRequestCategory && _enableTeaWineItemRequest;
+        public bool EnableRequestResultContinue => EnableResultCategory && _enableRequestResultContinue;
+        public bool EnableGuidanceResultContinue => EnableResultCategory && _enableGuidanceResultContinue;
+        public bool EnableAdoptAbandonedBaby => EnableFamilyCategory && _enableAdoptAbandonedBaby;
+        public bool EnablePrenatalEducation => EnableFamilyCategory && _enablePrenatalEducation;
+        public bool EnablePrenatalEducationResultContinue => EnableFamilyCategory && _enablePrenatalEducation && _enablePrenatalEducationResultContinue;
+        public int PrenatalEducationChoice { get; private set; } = 3;
         public int AdoptionMaxChildAge { get; private set; } = 3;
         public bool EnableActionLog { get; private set; } = true;
+        public bool EnableDebugLog { get; private set; } = true;
         public string LogDirectory { get; private set; } = "Logs";
         public string ActionLogFileName { get; private set; } = "executor_actions.jsonl";
         public string HumanLogFileName { get; private set; } = "executor_actions.log";
+        public string DebugLogFileName { get; private set; } = "executor_debug.jsonl";
+        public string DebugHumanLogFileName { get; private set; } = "executor_debug.log";
         public HashSet<ushort> AllowedRelationTypes { get; } = new HashSet<ushort> { 1024, 1, 2, 8, 16, 64, 128, 512, 8192 };
         public HashSet<sbyte> AllowedAdoptionBehaviorTypes { get; } = new HashSet<sbyte> { 0, 1, 2 };
 
@@ -59,7 +90,7 @@ namespace AutoMonthlyEvent.Executor.Frontend
                 else
                     AdaptableLog.Warning($"[AutoMonthlyEvent.Executor] Settings not found at {settingsPath}; using Config.lua/default values.");
 
-                AdaptableLog.Info($"[AutoMonthlyEvent.Executor] Config loaded. EnableAutoExecute={config.EnableAutoExecute}, DryRun={config.DryRun}, EnableActionLog={config.EnableActionLog}, LogDirectory={config.LogDirectory}");
+                AdaptableLog.Info($"[AutoMonthlyEvent.Executor] Config loaded. EnableAutoExecute={config.EnableAutoExecute}, DryRun={config.DryRun}, EnableActionLog={config.EnableActionLog}, EnableDebugLog={config.EnableDebugLog}, LogDirectory={config.LogDirectory}, MonthlyRequest={config.EnableMonthlyRequest}, RequestResultContinue={config.EnableRequestResultContinue}, GuidanceResultContinue={config.EnableGuidanceResultContinue}, FamilyCategory={config.EnableFamilyCategory}, FrontendSingleOptionContinue={config.EnableFrontendSingleOptionContinue}");
             }
             catch (Exception ex)
             {
@@ -75,19 +106,38 @@ namespace AutoMonthlyEvent.Executor.Frontend
             config.EnableAutoExecute = ReadBool(content, nameof(EnableAutoExecute), config.EnableAutoExecute);
             config.DryRun = ReadBool(content, nameof(DryRun), config.DryRun);
             config.UnknownPolicy = ReadString(content, nameof(UnknownPolicy), config.UnknownPolicy);
-            config.AutoContinueWhitelistedResults = ReadBool(content, nameof(AutoContinueWhitelistedResults), config.AutoContinueWhitelistedResults);
+            config.EnableRequestCategory = ReadBool(content, nameof(EnableRequestCategory), config.EnableRequestCategory);
+            config.EnableResultCategory = ReadBool(content, nameof(EnableResultCategory), config.EnableResultCategory);
+            config.EnableFamilyCategory = ReadBool(content, nameof(EnableFamilyCategory), config.EnableFamilyCategory);
+            config.EnableSocialContestCategory = ReadBool(content, nameof(EnableSocialContestCategory), config.EnableSocialContestCategory);
+            config.EnableFrontendAutoSelectCategory = ReadBool(content, nameof(EnableFrontendAutoSelectCategory), config.EnableFrontendAutoSelectCategory);
+            config.EnableBackendInterceptorCategory = ReadBool(content, nameof(EnableBackendInterceptorCategory), config.EnableBackendInterceptorCategory);
+            config._enableFrontendKeywordSelect = ReadBool(content, nameof(EnableFrontendKeywordSelect), config._enableFrontendKeywordSelect);
+            config._enableFrontendRememberSelection = ReadBool(content, nameof(EnableFrontendRememberSelection), config._enableFrontendRememberSelection);
+            config._enableFrontendMemorySelect = ReadBool(content, nameof(EnableFrontendMemorySelect), config._enableFrontendMemorySelect);
+            config._enableFrontendSingleOptionContinue = ReadBool(content, nameof(EnableFrontendSingleOptionContinue), config._enableFrontendSingleOptionContinue);
+            config._autoContinueWhitelistedResults = ReadBool(content, nameof(AutoContinueWhitelistedResults), config._autoContinueWhitelistedResults);
             config.RequestDirection = ReadString(content, nameof(RequestDirection), config.RequestDirection);
+            config.RequestRelationMode = NormalizeRequestRelationMode(ReadInt(content, nameof(RequestRelationMode), config.RequestRelationMode));
+            ResetAllowedRelationTypesFromMode(config);
             config.FallbackFavorabilityThreshold = ReadInt(content, nameof(FallbackFavorabilityThreshold), config.FallbackFavorabilityThreshold);
-            config.EnableResourceRequest = ReadBool(content, nameof(EnableResourceRequest), config.EnableResourceRequest);
-            config.EnableTeaWineItemRequest = ReadBool(content, nameof(EnableTeaWineItemRequest), config.EnableTeaWineItemRequest);
-            config.EnableRequestResultContinue = ReadBool(content, nameof(EnableRequestResultContinue), config.EnableRequestResultContinue);
-            config.EnableGuidanceResultContinue = ReadBool(content, nameof(EnableGuidanceResultContinue), config.EnableGuidanceResultContinue);
-            config.EnableAdoptAbandonedBaby = ReadBool(content, nameof(EnableAdoptAbandonedBaby), config.EnableAdoptAbandonedBaby);
+            config._enableMonthlyRequest = ReadBool(content, nameof(EnableMonthlyRequest), config._enableMonthlyRequest);
+            config._enableResourceRequest = ReadBool(content, nameof(EnableResourceRequest), config._enableResourceRequest);
+            config._enableTeaWineItemRequest = ReadBool(content, nameof(EnableTeaWineItemRequest), config._enableTeaWineItemRequest);
+            config._enableRequestResultContinue = ReadBool(content, nameof(EnableRequestResultContinue), config._enableRequestResultContinue);
+            config._enableGuidanceResultContinue = ReadBool(content, nameof(EnableGuidanceResultContinue), config._enableGuidanceResultContinue);
+            config._enableAdoptAbandonedBaby = ReadBool(content, nameof(EnableAdoptAbandonedBaby), config._enableAdoptAbandonedBaby);
+            config._enablePrenatalEducation = ReadBool(content, nameof(EnablePrenatalEducation), config._enablePrenatalEducation);
+            config._enablePrenatalEducationResultContinue = ReadBool(content, nameof(EnablePrenatalEducationResultContinue), config._enablePrenatalEducationResultContinue);
+            config.PrenatalEducationChoice = NormalizePrenatalEducationChoice(ReadInt(content, nameof(PrenatalEducationChoice), config.PrenatalEducationChoice));
             config.AdoptionMaxChildAge = ReadInt(content, nameof(AdoptionMaxChildAge), config.AdoptionMaxChildAge);
             config.EnableActionLog = ReadBool(content, nameof(EnableActionLog), config.EnableActionLog);
+            config.EnableDebugLog = ReadBool(content, nameof(EnableDebugLog), config.EnableDebugLog);
             config.LogDirectory = SanitizeRelativePath(ReadString(content, nameof(LogDirectory), config.LogDirectory), "Logs");
             config.ActionLogFileName = SanitizeFileName(ReadString(content, nameof(ActionLogFileName), config.ActionLogFileName), "executor_actions.jsonl");
             config.HumanLogFileName = SanitizeFileName(ReadString(content, nameof(HumanLogFileName), config.HumanLogFileName), "executor_actions.log");
+            config.DebugLogFileName = SanitizeFileName(ReadString(content, nameof(DebugLogFileName), config.DebugLogFileName), "executor_debug.jsonl");
+            config.DebugHumanLogFileName = SanitizeFileName(ReadString(content, nameof(DebugHumanLogFileName), config.DebugHumanLogFileName), "executor_debug.log");
 
             List<int> relations = ReadIntList(content, nameof(AllowedRelationTypes));
             if (relations.Count > 0)
@@ -165,6 +215,37 @@ namespace AutoMonthlyEvent.Executor.Frontend
             if (string.IsNullOrWhiteSpace(value) || Path.IsPathRooted(value) || value.Contains(".."))
                 return fallback;
             return value.Trim().Trim('\\', '/');
+        }
+
+        private static int NormalizeRequestRelationMode(int value)
+        {
+            return value >= 1 && value <= 3 ? value : 3;
+        }
+
+        private static void ResetAllowedRelationTypesFromMode(ExecutorConfig config)
+        {
+            config.AllowedRelationTypes.Clear();
+            ushort[] relations;
+            switch (config.RequestRelationMode)
+            {
+                case 1:
+                    relations = new ushort[] { 1024, 1, 2 };
+                    break;
+                case 2:
+                    relations = new ushort[] { 1024, 1, 2, 64, 128, 512 };
+                    break;
+                default:
+                    relations = new ushort[] { 1024, 1, 2, 64, 128, 512, 8192 };
+                    break;
+            }
+
+            foreach (ushort relation in relations)
+                config.AllowedRelationTypes.Add(relation);
+        }
+
+        private static int NormalizePrenatalEducationChoice(int value)
+        {
+            return value >= 1 && value <= 3 ? value : 1;
         }
 
         private static string SanitizeFileName(string value, string fallback)

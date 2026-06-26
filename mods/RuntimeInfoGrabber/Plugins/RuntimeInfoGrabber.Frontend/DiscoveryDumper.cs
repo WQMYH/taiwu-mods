@@ -24,6 +24,8 @@ namespace RuntimeInfoGrabber.Frontend
         private const string RuntimeMonthlyEventsFileName = "runtime_monthly_events.jsonl";
         private const string RuntimeEventOptionsFileName = "runtime_event_options.jsonl";
         private const string RuntimeMonthlyEventOptionsFileName = "runtime_monthly_event_options.jsonl";
+        private const string RuntimeMonthlyEventFlowFileName = "runtime_monthly_event_flow.jsonl";
+        private const string RuntimeMonthlyEventWindowsFileName = "runtime_monthly_event_windows.jsonl";
 
         private static bool _discoveryMode = true;
         private static bool _dumpToJson = true;
@@ -170,6 +172,7 @@ namespace RuntimeInfoGrabber.Frontend
                 if (signature != _lastEventOptionsSignature)
                 {
                     _lastEventOptionsSignature = signature;
+                    AdaptableLog.Info($"[AutoMonthlyEvent] Capture marker before generic event dump. Timestamp={Timestamp()}, EventGuid={data.EventGuid}, Options={data.EventOptionInfos?.Count ?? 0}");
                     string line = BuildEventOptionsJsonLine(data);
                     AppendLine(RuntimeEventOptionsFileName, line);
 
@@ -180,7 +183,11 @@ namespace RuntimeInfoGrabber.Frontend
                 if (_monthlyEventGuids.Contains(data.EventGuid) && signature != _lastMonthlyEventOptionsSignature)
                 {
                     _lastMonthlyEventOptionsSignature = signature;
-                    AppendLine(RuntimeMonthlyEventOptionsFileName, BuildMonthlyEventOptionsJsonLine(data));
+                    AdaptableLog.Info($"[AutoMonthlyEvent] Capture marker before monthly event dump. Timestamp={Timestamp()}, EventGuid={data.EventGuid}, Options={data.EventOptionInfos?.Count ?? 0}");
+                    string monthlyEventLine = BuildMonthlyEventOptionsJsonLine(data);
+                    AppendLine(RuntimeMonthlyEventOptionsFileName, monthlyEventLine);
+                    AppendLine(RuntimeMonthlyEventFlowFileName, monthlyEventLine);
+                    AppendLine(RuntimeMonthlyEventWindowsFileName, monthlyEventLine);
 
                     AdaptableLog.Info($"[AutoMonthlyEvent] Monthly event options dumped. EventGuid={data.EventGuid}, Options={data.EventOptionInfos?.Count ?? 0}");
                 }
@@ -326,10 +333,16 @@ namespace RuntimeInfoGrabber.Frontend
 
         private static string BuildEventOptionsJsonLine(TaiwuEventDisplayData data)
         {
+            bool isMonthlyEventGuid = !string.IsNullOrEmpty(data.EventGuid) && _monthlyEventGuids.Contains(data.EventGuid);
             var sb = new StringBuilder();
             sb.Append("{");
             AppendJsonProperty(sb, "timestamp", Timestamp(), false);
             AppendJsonProperty(sb, "eventGuid", data.EventGuid, true);
+            AppendJsonProperty(sb, "isMonthlyEventGuid", isMonthlyEventGuid, true);
+            AppendJsonProperty(sb, "classification", isMonthlyEventGuid ? "monthlyEventGuid" : "genericEvent", true);
+            AppendJsonProperty(sb, "stage", GetEventStage(data), true);
+            AppendJsonProperty(sb, "optionCount", data.EventOptionInfos?.Count ?? 0, true);
+            AppendJsonProperty(sb, "hasOptions", (data.EventOptionInfos?.Count ?? 0) > 0, true);
             AppendJsonProperty(sb, "eventContent", data.EventContent, true);
             AppendJsonProperty(sb, "mainCharacterId", data.MainCharacter?.CharacterId ?? -1, true);
             AppendJsonProperty(sb, "targetCharacterId", data.TargetCharacter?.CharacterId ?? -1, true);
@@ -368,6 +381,12 @@ namespace RuntimeInfoGrabber.Frontend
             AppendRecentMonthlyEventContextsProperty(sb, "recentRuntimeMonthlyEvents", data.EventGuid, true);
             sb.Append("}");
             return sb.ToString();
+        }
+
+        private static string GetEventStage(TaiwuEventDisplayData data)
+        {
+            int optionCount = data.EventOptionInfos?.Count ?? 0;
+            return optionCount <= 1 ? "singleChoiceOrContinue" : "promptOrChoice";
         }
 
         private static string BuildEventOptionsSignature(TaiwuEventDisplayData data)
@@ -614,6 +633,7 @@ namespace RuntimeInfoGrabber.Frontend
 
     internal static class EventModel_OnNotifyGameData_Patch
     {
+        [HarmonyPriority(Priority.First)]
         public static void Postfix(EventModel __instance)
         {
             DiscoveryDumper.DumpEventOptions(__instance);

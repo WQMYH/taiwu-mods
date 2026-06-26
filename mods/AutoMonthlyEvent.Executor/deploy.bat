@@ -38,5 +38,17 @@ if %errorlevel% neq 0 (
 )
 echo [OK] AutoMonthlyEvent.Executor.Frontend.dll
 
+if not exist "Plugins\AutoMonthlyEvent.Executor.Backend.dll" (
+    echo [ERROR] Backend DLL not found. Run build.bat first.
+    exit /b 1
+)
+
+copy /Y "Plugins\AutoMonthlyEvent.Executor.Backend.dll" "%MODS_DIR%\Plugins\" >nul
+if %errorlevel% neq 0 (
+    echo [FAILED] AutoMonthlyEvent.Executor.Backend.dll
+    exit /b 1
+)
+echo [OK] AutoMonthlyEvent.Executor.Backend.dll
+
 echo.
 echo [OK] Deployed to %MODS_DIR%

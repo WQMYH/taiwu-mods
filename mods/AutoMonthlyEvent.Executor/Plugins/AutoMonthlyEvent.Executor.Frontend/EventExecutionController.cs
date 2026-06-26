@@ -16,6 +16,7 @@ namespace AutoMonthlyEvent.Executor.Frontend
         {
             _config = config;
             HandledSignatures.Clear();
+            FrontendAutoSelector.Configure(config);
         }
 
         public static void InstallPatches(Harmony harmony)
@@ -29,6 +30,7 @@ namespace AutoMonthlyEvent.Executor.Frontend
 
             harmony.Patch(method,
                 postfix: new HarmonyMethod(typeof(EventModel_OnNotifyGameData_Patch), nameof(EventModel_OnNotifyGameData_Patch.Postfix)));
+            FrontendAutoSelector.InstallPatches(harmony);
         }
 
         public static void OnEventModelUpdated(EventModel eventModel)
@@ -42,18 +44,50 @@ namespace AutoMonthlyEvent.Executor.Frontend
                 return;
 
             string signature = EventClassifier.BuildSignature(data);
-            if (!HandledSignatures.Add(signature))
-                return;
-
             string candidateType = EventClassifier.Classify(data);
-            if (string.IsNullOrEmpty(candidateType))
+            ActionLogger.Debug("observe", data.EventGuid ?? string.Empty, candidateType, BuildDebugSnapshot(data, signature));
+
+            if (!HandledSignatures.Add(signature))
+            {
+                ActionLogger.Debug("dedupe", data.EventGuid ?? string.Empty, candidateType, "相同签名已处理，跳过重复窗口");
                 return;
+            }
+
+            if (string.IsNullOrEmpty(candidateType))
+            {
+                if (config.EnableAutoExecute && config.EnableFrontendMemorySelect && FrontendAutoSelector.TryGetRememberedOption(signature, data, out string rememberedOptionKey))
+                {
+                    var rememberedDecision = new EventDecision
+                    {
+                        EventGuid = data.EventGuid ?? string.Empty,
+                        CandidateType = "rememberedSelection",
+                        Decision = config.DryRun ? "将复用玩家选择" : "复用玩家选择",
+                        OptionKey = rememberedOptionKey,
+                        Reason = "严格签名命中玩家记忆选择",
+                        DryRun = config.DryRun,
+                        Skipped = false
+                    };
+                    ActionLogger.Log(rememberedDecision);
+                    ExecuteOptionIfAllowed(eventModel, config, signature, rememberedOptionKey, rememberedDecision);
+                    return;
+                }
+
+                if (config.EnableAutoExecute && TryHandleFrontendSingleOption(eventModel, config, data, signature, "singleOptionContinue", "未命中支持分类，但命中安全单选项继续"))
+                    return;
+
+                ActionLogger.Debug("classify-empty", data.EventGuid ?? string.Empty, candidateType, "未命中 Executor 支持分类；不会自动执行");
+                return;
+            }
 
             if (!config.EnableAutoExecute)
+            {
+                ActionLogger.Debug("disabled", data.EventGuid ?? string.Empty, candidateType, "EnableAutoExecute=false；不会自动执行");
                 return;
+            }
 
             if (EventClassifier.IsExplicitlyUnsupported(candidateType))
             {
+                ActionLogger.Debug("unsupported", data.EventGuid ?? string.Empty, candidateType, "显式排除事件类型");
                 LogSkip(config, data, candidateType, "事件不在执行器 v1 支持范围内");
                 return;
             }
@@ -61,6 +95,18 @@ namespace AutoMonthlyEvent.Executor.Frontend
             if (EventClassifier.IsAdoptionType(candidateType))
             {
                 HandleAdoption(eventModel, config, data, signature);
+                return;
+            }
+
+            if (EventClassifier.IsPrenatalEducationType(candidateType))
+            {
+                HandlePrenatalEducation(eventModel, config, data, signature);
+                return;
+            }
+
+            if (EventClassifier.IsPrenatalEducationResultType(candidateType))
+            {
+                HandlePrenatalEducationResult(eventModel, config, data, signature);
                 return;
             }
 
@@ -78,21 +124,30 @@ namespace AutoMonthlyEvent.Executor.Frontend
 
         private static void HandleContinue(EventModel eventModel, ExecutorConfig config, TaiwuEventDisplayData data, string candidateType, string signature)
         {
-            if (!config.AutoContinueWhitelistedResults)
+            bool enabled;
+            string disabledReason;
+            if (candidateType == EventClassifier.RequestResult)
             {
-                LogSkip(config, data, candidateType, "结果继续总开关未启用");
-                return;
+                enabled = config.EnableRequestResultContinue;
+                disabledReason = "请求结果继续未启用";
+            }
+            else if (candidateType == EventClassifier.GuidanceResult)
+            {
+                enabled = config.EnableGuidanceResultContinue;
+                disabledReason = "指点结果继续未启用";
+            }
+            else
+            {
+                enabled = config.AutoContinueWhitelistedResults;
+                disabledReason = "白名单结果继续未启用";
             }
 
-            if (candidateType == EventClassifier.RequestResult && !config.EnableRequestResultContinue)
+            if (!enabled)
             {
-                LogSkip(config, data, candidateType, "请求结果继续未启用");
-                return;
-            }
+                if (TryHandleFrontendSingleOption(eventModel, config, data, signature, "singleOptionContinue", disabledReason + "，改由全局安全单选项继续处理"))
+                    return;
 
-            if (candidateType == EventClassifier.GuidanceResult && !config.EnableGuidanceResultContinue)
-            {
-                LogSkip(config, data, candidateType, "指点结果继续未启用");
+                LogSkip(config, data, candidateType, disabledReason);
                 return;
             }
 
@@ -117,8 +172,42 @@ namespace AutoMonthlyEvent.Executor.Frontend
             ExecuteOptionIfAllowed(eventModel, config, signature, option.OptionKey ?? string.Empty, decision);
         }
 
+        private static bool TryHandleFrontendSingleOption(EventModel eventModel, ExecutorConfig config, TaiwuEventDisplayData data, string signature, string candidateType, string reasonPrefix)
+        {
+            if (!config.EnableFrontendSingleOptionContinue)
+                return false;
+
+            if (!EventClassifier.TryFindSafeSingleContinueOption(data, out EventOptionInfo option, out string reason))
+            {
+                ActionLogger.Debug("single-option-skip", data.EventGuid ?? string.Empty, candidateType, reason);
+                return false;
+            }
+
+            var decision = new EventDecision
+            {
+                EventGuid = data.EventGuid ?? string.Empty,
+                CandidateType = candidateType,
+                Decision = config.DryRun ? "将全局单选项继续" : "全局单选项继续",
+                OptionKey = option.OptionKey ?? string.Empty,
+                Reason = reasonPrefix,
+                SummaryZh = $"全局单选项继续：{option.OptionContent}",
+                DryRun = config.DryRun,
+                Skipped = false
+            };
+            ActionLogger.Log(decision);
+            ExecuteOptionIfAllowed(eventModel, config, signature, option.OptionKey ?? string.Empty, decision);
+            return true;
+        }
+
         private static void HandleRequest(EventModel eventModel, ExecutorConfig config, TaiwuEventDisplayData data, string candidateType, string signature)
         {
+            if (candidateType == EventClassifier.MonthlyRequest && !config.EnableMonthlyRequest)
+            {
+                ActionLogger.Debug("request-disabled", data.EventGuid ?? string.Empty, candidateType, "EnableMonthlyRequest=false");
+                LogSkip(config, data, candidateType, "请求系列 66-86 自动处理未启用");
+                return;
+            }
+
             if (candidateType == EventClassifier.ResourceRequest && !config.EnableResourceRequest)
             {
                 LogSkip(config, data, candidateType, "资源请求自动处理未启用");
@@ -133,23 +222,29 @@ namespace AutoMonthlyEvent.Executor.Frontend
 
             if (!EventClassifier.TryFindRequestOptions(data, out EventOptionInfo giveOption, out EventOptionInfo rejectOption, out string reason))
             {
+                ActionLogger.Debug("request-options-failed", data.EventGuid ?? string.Empty, candidateType, reason + "；" + BuildOptionsText(data));
                 LogSkip(config, data, candidateType, reason);
                 return;
             }
+            ActionLogger.Debug("request-options-ok", data.EventGuid ?? string.Empty, candidateType, $"正向={giveOption.OptionKey}/{giveOption.OptionContent}；婉拒={rejectOption.OptionKey}/{rejectOption.OptionContent}");
 
             CharacterDisplayData? requester = RelationConditionResolver.FindRequester(eventModel);
             if (requester == null || requester.CharacterId <= 0)
             {
+                ActionLogger.Debug("requester-missing", data.EventGuid ?? string.Empty, candidateType, $"main={data.MainCharacter?.CharacterId ?? -1}; target={data.TargetCharacter?.CharacterId ?? -1}");
                 LogSkip(config, data, candidateType, "无法确认请求者角色");
                 return;
             }
+            ActionLogger.Debug("requester-found", data.EventGuid ?? string.Empty, candidateType, $"requester={requester.CharacterId}; favorability={requester.FavorabilityToTaiwu}");
 
             RelationConditionResolver.Resolve(requester, result =>
             {
                 try
                 {
+                    ActionLogger.Debug("relation-callback", data.EventGuid ?? string.Empty, candidateType, $"resolved={result.Resolved}; relation={result.RelationType}; favorability={result.Favorability}; shouldGive={result.ShouldGive}; reason={result.Reason}");
                     if (!IsCurrentSignature(eventModel, signature))
                     {
+                        ActionLogger.Debug("relation-stale", data.EventGuid ?? string.Empty, candidateType, "关系回调返回时窗口签名已经变化");
                         var staleDecision = new EventDecision
                         {
                             EventGuid = data.EventGuid ?? string.Empty,
@@ -170,6 +265,7 @@ namespace AutoMonthlyEvent.Executor.Frontend
                     EventOptionInfo selectedOption = result.ShouldGive ? giveOption : rejectOption;
                     string action = result.ShouldGive ? "给予" : "拒绝";
                     string wouldAction = result.ShouldGive ? "将给予" : "将拒绝";
+                    int templateId = EventClassifier.GetRequestTemplateId(data);
                     var decision = new EventDecision
                     {
                         EventGuid = data.EventGuid ?? string.Empty,
@@ -177,7 +273,7 @@ namespace AutoMonthlyEvent.Executor.Frontend
                         RequesterCharacterId = requester.CharacterId,
                         Decision = config.DryRun ? wouldAction : action,
                         OptionKey = selectedOption.OptionKey ?? string.Empty,
-                        Reason = result.Reason,
+                        Reason = templateId > 0 ? $"{result.Reason}；templateId={templateId}" : result.Reason,
                         RelationType = result.RelationType,
                         Favorability = result.Favorability,
                         RelationResolved = result.Resolved,
@@ -195,6 +291,72 @@ namespace AutoMonthlyEvent.Executor.Frontend
             });
         }
 
+        private static void HandlePrenatalEducation(EventModel eventModel, ExecutorConfig config, TaiwuEventDisplayData data, string signature)
+        {
+            const string candidateType = EventClassifier.PrenatalEducation;
+            if (!config.EnablePrenatalEducation)
+            {
+                LogSkip(config, data, candidateType, "胎教自动处理未启用");
+                return;
+            }
+
+            if (!EventClassifier.TryFindPrenatalEducationOption(data, config.PrenatalEducationChoice, out EventOptionInfo option, out string reason))
+            {
+                ActionLogger.Debug("prenatal-option-failed", data.EventGuid ?? string.Empty, candidateType, reason + "；" + BuildOptionsText(data));
+                LogSkip(config, data, candidateType, reason);
+                return;
+            }
+            ActionLogger.Debug("prenatal-option-ok", data.EventGuid ?? string.Empty, candidateType, $"choice={config.PrenatalEducationChoice}; option={option.OptionKey}/{option.OptionContent}");
+
+            var decision = new EventDecision
+            {
+                EventGuid = data.EventGuid ?? string.Empty,
+                CandidateType = candidateType,
+                Decision = config.DryRun ? "将胎教" : "胎教",
+                OptionKey = option.OptionKey ?? string.Empty,
+                Reason = $"胎教默认选项：{config.PrenatalEducationChoice}",
+                SummaryZh = $"胎教：选择第 {config.PrenatalEducationChoice} 项 {option.OptionContent}",
+                DryRun = config.DryRun,
+                Skipped = false
+            };
+            ActionLogger.Log(decision);
+
+            ExecuteOptionIfAllowed(eventModel, config, signature, option.OptionKey ?? string.Empty, decision);
+        }
+
+        private static void HandlePrenatalEducationResult(EventModel eventModel, ExecutorConfig config, TaiwuEventDisplayData data, string signature)
+        {
+            const string candidateType = EventClassifier.PrenatalEducationResult;
+            if (!config.EnablePrenatalEducationResultContinue)
+            {
+                LogSkip(config, data, candidateType, "胎教结果退出未启用");
+                return;
+            }
+
+            if (!EventClassifier.TryFindPrenatalEducationResultExitOption(data, out EventOptionInfo option, out string reason))
+            {
+                ActionLogger.Debug("prenatal-result-option-failed", data.EventGuid ?? string.Empty, candidateType, reason + "；" + BuildOptionsText(data));
+                LogSkip(config, data, candidateType, reason);
+                return;
+            }
+            ActionLogger.Debug("prenatal-result-option-ok", data.EventGuid ?? string.Empty, candidateType, $"option={option.OptionKey}/{option.OptionContent}");
+
+            var decision = new EventDecision
+            {
+                EventGuid = data.EventGuid ?? string.Empty,
+                CandidateType = candidateType,
+                Decision = config.DryRun ? "将退出胎教结果" : "退出胎教结果",
+                OptionKey = option.OptionKey ?? string.Empty,
+                Reason = "胎教 3->1 链路：结果窗口确认退出",
+                SummaryZh = $"胎教结果：{option.OptionContent}",
+                DryRun = config.DryRun,
+                Skipped = false
+            };
+            ActionLogger.Log(decision);
+
+            ExecuteOptionIfAllowed(eventModel, config, signature, option.OptionKey ?? string.Empty, decision);
+        }
+
         private static void HandleAdoption(EventModel eventModel, ExecutorConfig config, TaiwuEventDisplayData data, string signature)
         {
             const string candidateType = EventClassifier.AdoptAbandonedBaby;
@@ -206,6 +368,7 @@ namespace AutoMonthlyEvent.Executor.Frontend
 
             if (!EventClassifier.TryFindAdoptionOptions(data, out EventOptionInfo adoptOption, out EventOptionInfo postponeOption, out string reason))
             {
+                ActionLogger.Debug("adoption-options-failed", data.EventGuid ?? string.Empty, candidateType, reason + "；" + BuildOptionsText(data));
                 LogSkip(config, data, candidateType, reason);
                 return;
             }
@@ -247,10 +410,14 @@ namespace AutoMonthlyEvent.Executor.Frontend
         private static void ExecuteOptionIfAllowed(EventModel eventModel, ExecutorConfig config, string signature, string optionKey, EventDecision decision)
         {
             if (config.DryRun)
+            {
+                ActionLogger.Debug("execute-dryrun", decision.EventGuid, decision.CandidateType, $"DryRun=true; option={optionKey}");
                 return;
+            }
 
             if (!IsCurrentSignature(eventModel, signature))
             {
+                ActionLogger.Debug("execute-stale-before", decision.EventGuid, decision.CandidateType, $"执行前签名变化；option={optionKey}");
                 decision.Decision = "skip";
                 decision.Reason = "执行前事件窗口已变化";
                 decision.Skipped = true;
@@ -260,6 +427,7 @@ namespace AutoMonthlyEvent.Executor.Frontend
 
             if (!IsCurrentOptionAvailable(eventModel, optionKey))
             {
+                ActionLogger.Debug("execute-option-unavailable", decision.EventGuid, decision.CandidateType, $"执行前目标选项不可用；option={optionKey}; current={BuildOptionsText(eventModel.DisplayingEventData)}");
                 decision.Decision = "skip";
                 decision.Reason = "目标选项已不可用";
                 decision.Skipped = true;
@@ -267,7 +435,8 @@ namespace AutoMonthlyEvent.Executor.Frontend
                 return;
             }
 
-            eventModel.Select(optionKey);
+            ActionLogger.Debug("execute-enqueue-before", decision.EventGuid, decision.CandidateType, $"提交给 EventWindow.Update 延迟选择；option={optionKey}");
+            FrontendAutoSelector.Enqueue(signature, optionKey, decision);
         }
 
         private static bool IsCurrentSignature(EventModel eventModel, string signature)
@@ -292,6 +461,7 @@ namespace AutoMonthlyEvent.Executor.Frontend
 
         private static void LogSkip(ExecutorConfig config, TaiwuEventDisplayData data, string candidateType, string reason)
         {
+            ActionLogger.Debug("skip", data.EventGuid ?? string.Empty, candidateType, reason);
             ActionLogger.Log(new EventDecision
             {
                 EventGuid = data.EventGuid ?? string.Empty,
@@ -367,10 +537,27 @@ namespace AutoMonthlyEvent.Executor.Frontend
                     return "未知(" + behaviorType + ")";
             }
         }
+
+        private static string BuildDebugSnapshot(TaiwuEventDisplayData data, string signature)
+        {
+            return $"signature={signature}; main={data.MainCharacter?.CharacterId ?? -1}; target={data.TargetCharacter?.CharacterId ?? -1}; optionCount={data.EventOptionInfos?.Count ?? 0}; options={BuildOptionsText(data)}";
+        }
+
+        private static string BuildOptionsText(TaiwuEventDisplayData? data)
+        {
+            if (data?.EventOptionInfos == null)
+                return "null";
+
+            var parts = new List<string>();
+            foreach (EventOptionInfo option in data.EventOptionInfos)
+                parts.Add($"{option.OptionKey}|state={option.OptionState}|behavior={option.Behavior}|content={option.OptionContent}");
+            return string.Join(" || ", parts);
+        }
     }
 
     internal static class EventModel_OnNotifyGameData_Patch
     {
+        [HarmonyPriority(Priority.Last)]
         public static void Postfix(EventModel __instance)
         {
             EventExecutionController.OnEventModelUpdated(__instance);
