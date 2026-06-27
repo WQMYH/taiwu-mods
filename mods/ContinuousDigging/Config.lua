@@ -1,15 +1,12 @@
 return {
     Title = "连续挖掘",
-    Author = "MOD Developer",
+    Author = "WQHH",
     Version = "1.1.0",
-    Description = "修改连续挖宝成功后自动停止的行为。默认使用前端续挖；可选启用后端批量结算。",
+    Description = "[b]连续挖掘 (Continuous Digging)[/b]\n\n厌倦了每次挖到宝物后自动停止？这个 MOD 修改了太吾绘卷原版的连续挖掘逻辑。开启后，你的角色将不知疲倦地持续挖掘，直到地块被掏空、行动力耗尽或挖出了你设定的顶级宝物。\n\n[b]核心功能：[/b]\n[list]\n[*][b]真正的连续挖掘[/b]：突破原版“出宝即停”的限制，实现全自动循环挖掘。\n[*][b]智能退出机制[/b]：支持品级阈值、行动力保护及安全上限设置。\n[*][b]实验性后端模式[/b]：开启后可在后台瞬间完成多次挖掘结算，大幅节省过月等待时间。\n[/list]\n\n[b]注意：[/b]后端模式会跳过动画并将奖励直接送入背包，建议在地块杂物较多时使用。",
     Source = 0,
     GameVersion = "1.0.32",
     FrontendPlugins = {
         [1] = "ContinuousDigging.Frontend.dll",
-    },
-    BackendPlugins = {
-        [1] = "ContinuousDigging.Backend.dll",
     },
     Visibility = 2,
 
@@ -22,41 +19,34 @@ return {
             DefaultValue = true,
         },
         [2] = {
-            SettingType = "Toggle",
-            Key = "EnableBackendPatch",
-            DisplayName = "启用后端批量挖掘（实验性）",
-            Description = "默认关闭。开启后后端会接管所有挖宝请求（包括“挖掘一次”）并连续调用原版结算；前端续挖会自动停用。奖励全部进入背包，但窗口只显示最后一次有效结果。",
-            DefaultValue = false,
-        },
-        [3] = {
             SettingType = "InputField",
             Key = "MaxGradeLimit",
             DisplayName = "最高品级停止阈值",
             Description = "0 表示不因品级停止；1-9 表示挖到该品级或更高品级时停止。数值越小品级越高。",
             DefaultValue = "0",
         },
-        [4] = {
+        [3] = {
             SettingType = "InputField",
             Key = "ActionPointCostPerDig",
             DisplayName = "每次挖掘行动力",
             Description = "原版一次挖宝消耗 3 天，即 30 行动力。仅用于前端模式的提前检查。",
             DefaultValue = "30",
         },
-        [5] = {
+        [4] = {
             SettingType = "Toggle",
             Key = "EnableActionPointCheck",
             DisplayName = "启用行动力检查",
-            Description = "前端模式下，剩余行动力不足一次挖掘时停止。后端始终使用原版剩余天数检查。",
+            Description = "剩余行动力不足一次挖掘时停止。",
             DefaultValue = true,
         },
-        [6] = {
+        [5] = {
             SettingType = "InputField",
             Key = "MaxConsecutiveDigs",
             DisplayName = "最大连续挖掘次数",
-            Description = "前端和后端共用的安全上限，防止异常无限循环。",
+            Description = "连续挖掘的安全上限，防止异常无限循环。",
             DefaultValue = "50",
         },
-        [7] = {
+        [6] = {
             SettingType = "Toggle",
             Key = "EnableDebugLog",
             DisplayName = "启用调试日志",
