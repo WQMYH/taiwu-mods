@@ -32,8 +32,11 @@ namespace AutoMonthlyEvent.Executor.Frontend
             _isAutoSelecting = false;
             _customSkipSuspended = false;
             _suspendHotkey = HotkeyBinding.Parse(config.CustomDialogSkipSuspendHotkey);
-            _customMemoryFilePath = Path.Combine(config.ModDirectoryPath, "UserData", "custom_dialog_skip.tsv");
-            LoadMemory();
+            _customMemoryFilePath = string.IsNullOrWhiteSpace(config.ModDirectoryPath)
+                ? string.Empty
+                : Path.Combine(config.ModDirectoryPath, "UserData", "custom_dialog_skip.tsv");
+            if (!string.IsNullOrEmpty(_customMemoryFilePath))
+                LoadMemory();
         }
 
         public static void InstallPatches(Harmony harmony)
@@ -411,6 +414,12 @@ namespace AutoMonthlyEvent.Executor.Frontend
 
         private static void PersistMemory()
         {
+            if (string.IsNullOrEmpty(_customMemoryFilePath))
+            {
+                AdaptableLog.Warning("[AutoMonthlyEvent.Executor] Custom dialog skip memory was not saved because the mod directory is unavailable.");
+                return;
+            }
+
             try
             {
                 string? directory = Path.GetDirectoryName(_customMemoryFilePath);

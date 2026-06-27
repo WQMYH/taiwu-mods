@@ -14,7 +14,9 @@ namespace AutoMonthlyEvent.Executor.Backend
         public static void Configure(BackendExecutorConfig config)
         {
             _config = config;
-            _logFilePath = Path.Combine(config.ModDirectoryPath, config.LogDirectory, "backend_interceptor.log");
+            _logFilePath = string.IsNullOrWhiteSpace(config.ModDirectoryPath)
+                ? string.Empty
+                : Path.Combine(config.ModDirectoryPath, config.LogDirectory, "backend_interceptor.log");
         }
 
         public static void Log(string eventType, string decision, string reason, int selfCharId = -1, int targetCharId = -1, Exception? exception = null)
@@ -25,7 +27,7 @@ namespace AutoMonthlyEvent.Executor.Backend
                 line += " 异常=" + exception.GetType().Name + ": " + exception.Message;
 
             Logger.Info("[AutoMonthlyEvent.Executor] " + line);
-            if (config == null || !config.EnableActionLog)
+            if (config == null || !config.EnableActionLog || string.IsNullOrEmpty(_logFilePath))
                 return;
 
             try

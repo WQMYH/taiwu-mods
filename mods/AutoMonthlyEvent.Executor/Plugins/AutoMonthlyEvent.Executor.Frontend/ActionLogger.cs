@@ -16,6 +16,14 @@ namespace AutoMonthlyEvent.Executor.Frontend
         public static void Configure(ExecutorConfig config)
         {
             _config = config;
+            if (string.IsNullOrWhiteSpace(config.ModDirectoryPath))
+            {
+                _logFilePath = string.Empty;
+                _humanLogFilePath = string.Empty;
+                _debugLogFilePath = string.Empty;
+                _debugHumanLogFilePath = string.Empty;
+                return;
+            }
             _logFilePath = Path.Combine(config.ModDirectoryPath, config.LogDirectory, config.ActionLogFileName);
             _humanLogFilePath = Path.Combine(config.ModDirectoryPath, config.LogDirectory, config.HumanLogFileName);
             _debugLogFilePath = Path.Combine(config.ModDirectoryPath, config.LogDirectory, config.DebugLogFileName);
@@ -25,7 +33,7 @@ namespace AutoMonthlyEvent.Executor.Frontend
         public static void Log(EventDecision decision)
         {
             ExecutorConfig? config = _config;
-            if (config == null || !config.EnableActionLog)
+            if (config == null || !config.EnableActionLog || string.IsNullOrEmpty(_logFilePath))
                 return;
 
             try
@@ -46,7 +54,7 @@ namespace AutoMonthlyEvent.Executor.Frontend
         public static void Debug(string stage, string eventGuid, string candidateType, string message)
         {
             ExecutorConfig? config = _config;
-            if (config == null || !config.EnableDebugLog)
+            if (config == null || !config.EnableDebugLog || string.IsNullOrEmpty(_debugLogFilePath))
                 return;
 
             try

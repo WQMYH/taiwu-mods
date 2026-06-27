@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using GameData.Utilities;
 using UnityEngine;
@@ -81,13 +82,15 @@ namespace AutoMonthlyEvent.Executor.Frontend
         public static ExecutorConfig Load()
         {
             var config = new ExecutorConfig();
-            config.GameRootPath = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
-            config.ModDirectoryPath = Path.Combine(config.GameRootPath, "Mod", ModDirectoryName);
+            config.GameRootPath = ResolveGameRoot();
+            config.ModDirectoryPath = ResolveModDirectory(config.GameRootPath);
             string configPath = Path.Combine(config.ModDirectoryPath, ConfigFileName);
             string settingsPath = Path.Combine(config.ModDirectoryPath, SettingsFileName);
+            string alternateSettingsPath = Path.Combine(config.ModDirectoryPath, "Settings.lua");
 
             try
             {
+                AdaptableLog.Info($"[AutoMonthlyEvent.Executor] Config paths. GameRoot={config.GameRootPath}, ModDirectory={config.ModDirectoryPath}, ConfigExists={File.Exists(configPath)}, SettingsExists={File.Exists(settingsPath) || File.Exists(alternateSettingsPath)}");
                 if (!File.Exists(configPath))
                 {
                     AdaptableLog.Warning($"[AutoMonthlyEvent.Executor] Config not found at {configPath}; using executor defaults.");
@@ -99,6 +102,8 @@ namespace AutoMonthlyEvent.Executor.Frontend
 
                 if (File.Exists(settingsPath))
                     ApplyContent(config, File.ReadAllText(settingsPath));
+                else if (File.Exists(alternateSettingsPath))
+                    ApplyContent(config, File.ReadAllText(alternateSettingsPath));
                 else
                     AdaptableLog.Warning($"[AutoMonthlyEvent.Executor] Settings not found at {settingsPath}; using Config.lua/default values.");
 
@@ -192,18 +197,24 @@ namespace AutoMonthlyEvent.Executor.Frontend
         private static bool ReadBool(string content, string key, bool fallback)
         {
             Match match = Regex.Match(content, key + "\\s*=\\s*(true|false)", RegexOptions.IgnoreCase);
+            if (!match.Success)
+                match = MatchDefaultValue(content, key, "(true|false)");
             return match.Success ? string.Equals(match.Groups[1].Value, "true", StringComparison.OrdinalIgnoreCase) : fallback;
         }
 
         private static int ReadInt(string content, string key, int fallback)
         {
             Match match = Regex.Match(content, key + "\\s*=\\s*\"?(-?\\d+)\"?", RegexOptions.IgnoreCase);
+            if (!match.Success)
+                match = MatchDefaultValue(content, key, "\"?(-?\\d+)\"?");
             return match.Success && int.TryParse(match.Groups[1].Value, out int value) ? value : fallback;
         }
 
         private static string ReadString(string content, string key, string fallback)
         {
             Match match = Regex.Match(content, key + "\\s*=\\s*\"([^\"]*)\"", RegexOptions.IgnoreCase);
+            if (!match.Success)
+                match = MatchDefaultValue(content, key, "\"([^\"]*)\"");
             return match.Success ? match.Groups[1].Value : fallback;
         }
 
@@ -220,6 +231,8 @@ namespace AutoMonthlyEvent.Executor.Frontend
             {
                 Match stringMatch = Regex.Match(content, key + "\\s*=\\s*\"([^\"]*)\"", RegexOptions.IgnoreCase);
                 if (!stringMatch.Success)
+                    stringMatch = MatchDefaultValue(content, key, "\"([^\"]*)\"");
+                if (!stringMatch.Success)
                     return result;
                 valueText = stringMatch.Groups[1].Value;
             }
@@ -230,6 +243,14 @@ namespace AutoMonthlyEvent.Executor.Frontend
                     result.Add(value);
             }
             return result;
+        }
+
+        private static Match MatchDefaultValue(string content, string key, string valuePattern)
+        {
+            return Regex.Match(
+                content,
+                "Key\\s*=\\s*\"" + Regex.Escape(key) + "\"[\\s\\S]*?DefaultValue\\s*=\\s*" + valuePattern,
+                RegexOptions.IgnoreCase);
         }
 
         private static string SanitizeRelativePath(string value, string fallback)
@@ -290,6 +311,85 @@ namespace AutoMonthlyEvent.Executor.Frontend
 
             value = value.Trim();
             return value.Length <= 1 ? value : value.Substring(0, 1);
+        }
+
+        private static string ResolveGameRoot()
+        {
+            string fromCurrent = Directory.GetCurrentDirectory();
+            if (Directory.Exists(Path.Combine(fromCurrent, "Mod")))
+                return fromCurrent;
+
+            string fromDataPath = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+            if (Directory.Exists(Path.Combine(fromDataPath, "Mod")))
+                return fromDataPath;
+
+            // Fallback to current directory
+            return fromCurrent;
+        }
+
+        private static string ResolveModDirectory(string gameRoot)
+        {
+            string? fromAssembly = TryResolveModDirectoryFromAssembly();
+            if (!string.IsNullOrEmpty(fromAssembly))
+                return fromAssembly;
+
+            string? fromScan = TryResolveModDirectoryByScanning(gameRoot);
+            if (!string.IsNullOrEmpty(fromScan))
+                return fromScan;
+
+            return Path.Combine(gameRoot, "Mod", ModDirectoryName);
+        }
+
+        private static string? TryResolveModDirectoryFromAssembly()
+        {
+            try
+            {
+                string assemblyPath = Assembly.GetExecutingAssembly().Location;
+                if (string.IsNullOrEmpty(assemblyPath))
+                    return null;
+
+                DirectoryInfo? directory = Directory.GetParent(assemblyPath);
+                while (directory != null)
+                {
+                    if (string.Equals(directory.Name, "Plugins", StringComparison.OrdinalIgnoreCase) && directory.Parent != null)
+                        return directory.Parent.FullName;
+
+                    if (File.Exists(Path.Combine(directory.FullName, ConfigFileName)) &&
+                        Directory.Exists(Path.Combine(directory.FullName, "Plugins")))
+                        return directory.FullName;
+
+                    directory = directory.Parent;
+                }
+            }
+            catch
+            {
+                return null;
+            }
+
+            return null;
+        }
+
+        private static string? TryResolveModDirectoryByScanning(string gameRoot)
+        {
+            try
+            {
+                string modRoot = Path.Combine(gameRoot, "Mod");
+                if (!Directory.Exists(modRoot))
+                    return null;
+
+                foreach (string directory in Directory.GetDirectories(modRoot))
+                {
+                    string pluginPath = Path.Combine(directory, "Plugins", "AutoMonthlyEvent.Executor.Frontend.dll");
+                    if (File.Exists(pluginPath))
+                        return directory;
+                }
+            }
+            catch
+            {
+                return null;
+            }
+
+            return null;
         }
     }
 }

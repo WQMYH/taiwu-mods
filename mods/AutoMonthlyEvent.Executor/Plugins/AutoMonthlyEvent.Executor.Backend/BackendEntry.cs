@@ -15,11 +15,9 @@ namespace AutoMonthlyEvent.Executor.Backend
         {
             try
             {
-                BackendExecutorConfig config = BackendExecutorConfig.Load();
-                BackendActionLogger.Configure(config);
+                ReloadSettings();
 
                 _harmony = new Harmony("com.auto.monthlyevent.executor.backend");
-                BackendEventInterceptor.Configure(config);
                 BackendEventInterceptor.Install(_harmony);
 
                 Logger.Info("[AutoMonthlyEvent.Executor] Backend plugin loaded.");
@@ -28,6 +26,26 @@ namespace AutoMonthlyEvent.Executor.Backend
             {
                 Logger.Error(ex, "[AutoMonthlyEvent.Executor] Failed to load backend plugin.");
             }
+        }
+
+        public override void OnModSettingUpdate()
+        {
+            try
+            {
+                ReloadSettings();
+                Logger.Info("[AutoMonthlyEvent.Executor] Backend settings reloaded.");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "[AutoMonthlyEvent.Executor] Failed to reload backend settings.");
+            }
+        }
+
+        private void ReloadSettings()
+        {
+            BackendExecutorConfig config = BackendExecutorConfig.Load(ModIdStr);
+            BackendActionLogger.Configure(config);
+            BackendEventInterceptor.Configure(config);
         }
 
         public override void Dispose()

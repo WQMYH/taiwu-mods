@@ -16,10 +16,7 @@ namespace AutoMonthlyEvent.Executor.Frontend
         {
             try
             {
-                ExecutorConfig config = ExecutorConfig.Load();
-                ActionLogger.Configure(config);
-                RelationConditionResolver.Configure(this, config);
-                EventExecutionController.Configure(config);
+                ReloadSettings();
 
                 _harmony = new Harmony("com.auto.monthlyevent.executor.frontend");
                 EventExecutionController.InstallPatches(_harmony);
@@ -30,6 +27,27 @@ namespace AutoMonthlyEvent.Executor.Frontend
             {
                 AdaptableLog.Error($"[AutoMonthlyEvent.Executor] Failed to load frontend plugin: {ex}");
             }
+        }
+
+        public override void OnModSettingUpdate()
+        {
+            try
+            {
+                ReloadSettings();
+                AdaptableLog.Info("[AutoMonthlyEvent.Executor] Frontend settings reloaded.");
+            }
+            catch (Exception ex)
+            {
+                AdaptableLog.Error($"[AutoMonthlyEvent.Executor] Failed to reload frontend settings: {ex}");
+            }
+        }
+
+        private void ReloadSettings()
+        {
+            ExecutorConfig config = ExecutorConfig.Load(ModIdStr);
+            ActionLogger.Configure(config);
+            RelationConditionResolver.Configure(this, config);
+            EventExecutionController.Configure(config);
         }
 
         public override void Dispose()

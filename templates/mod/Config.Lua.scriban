@@ -1,14 +1,24 @@
 return {
-  Title = "{{ mod.name }}",
-  FileId = 0,
-  Version = "{{ mod.version }}",
-  GameVersion = "1.0.20",
-  Author = "",
-  Description = "",
-  BackendPlugins = {
-    "{{ mod.name }}.Backend.dll",
-  },
-  FrontendPlugins = {
-    "{{ mod.name }}.Frontend.dll",
-  },
+	Title = "{{ mod.name }}",
+	Author = "",
+	Version = "{{ mod.version }}",
+	Description = "",
+	Source = 0,
+	GameVersion = "1.0.29",
+	BackendPlugins = {
+		[1] = "{{ mod.name }}.Backend.dll",
+	},
+	FrontendPlugins = {
+		[1] = "{{ mod.name }}.Frontend.dll",
+	},
+	TagList = {
+		[1] = "Modifications",
+	},
+	Visibility = 2,
+	DefaultSettings = {},
+	ChangeConfig = false,
+	HasArchive = false,
+	NeedRestartWhenSettingChanged = false,
+	Cover = "Cover.png",
+	WorkshopCover = "Cover.png",
 }
