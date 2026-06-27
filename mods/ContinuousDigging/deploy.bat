@@ -20,5 +20,7 @@ if not exist "%TARGET_DIR%\Plugins" mkdir "%TARGET_DIR%\Plugins"
 copy /Y "%SOURCE_DIR%Config.lua" "%TARGET_DIR%\Config.lua" >nul
 copy /Y "%SOURCE_DIR%Plugins\ContinuousDigging.Frontend.dll" "%TARGET_DIR%\Plugins\ContinuousDigging.Frontend.dll" >nul
 copy /Y "%SOURCE_DIR%Plugins\ContinuousDigging.Frontend.pdb" "%TARGET_DIR%\Plugins\ContinuousDigging.Frontend.pdb" >nul
+copy /Y "%SOURCE_DIR%Plugins\ContinuousDigging.Backend.dll" "%TARGET_DIR%\Plugins\ContinuousDigging.Backend.dll" >nul
+copy /Y "%SOURCE_DIR%Plugins\ContinuousDigging.Backend.pdb" "%TARGET_DIR%\Plugins\ContinuousDigging.Backend.pdb" >nul
 
 echo [OK] Deployed to "%TARGET_DIR%"
