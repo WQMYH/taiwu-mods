@@ -1,0 +1,8 @@
+bin/
+obj/
+*.dll
+*.pdb
+*.deps.json
+*.log
+*.tmp
+Deploy/
