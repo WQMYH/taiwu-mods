@@ -1,7 +1,7 @@
 return {
 	Title = "月度事件自动处理器",
 	Author = "WQMYH",
-	Version = "1.0.0.0",
+	Version = "1.1.0.0",
 	Description = "【早期测试版】自动处理太吾绘卷中的月度交互事件。当前支持：NPC请求系列66-86、结果窗口继续、家庭事件（收养弃婴/胎教）、新生儿取名、智能选择功能。Steam创意工坊订阅后请手动开启所需功能。",
 	Source = 0,
 	GameVersion = "1.0.32",
@@ -121,7 +121,7 @@ return {
 			DisplayName = "好感阈值",
 			Description = "关系不在允许范围内时，好感达到该值才给予或相助。",
 			GroupName = "NPC请求处理",
-			DefaultValue = "15000",
+			DefaultValue = "25000",
 		},
 		[12] = {
 			SettingType = "Toggle",
@@ -237,14 +237,6 @@ return {
 		},
 		[25] = {
 			SettingType = "Toggle",
-			Key = "EnableBackendMakeLoveInterceptor",
-			DisplayName = "后端春宵截获",
-			Description = "开启后阻止春宵月度事件加入事件集合，避免干扰其他自动化流程。",
-			GroupName = "家庭事件处理",
-			DefaultValue = false,
-		},
-		[26] = {
-			SettingType = "Toggle",
 			Key = "EnableBackendPrenatalEducation",
 			DisplayName = "后端胎教截获",
 			Description = "使用后端方式处理胎教事件，提供更稳定的自动化体验。",
@@ -255,7 +247,7 @@ return {
 		-- ========================================
 		-- 新生儿取名
 		-- ========================================
-		[27] = {
+		[26] = {
 			SettingType = "Toggle",
 			Key = "EnableBirthNaming",
 			DisplayName = "喜得贵子/千金取名",
@@ -263,7 +255,7 @@ return {
 			GroupName = "新生儿取名",
 			DefaultValue = false,
 		},
-		[28] = {
+		[27] = {
 			SettingType = "Toggle",
 			Key = "TaiwuBirthUseOwnSurname",
 			DisplayName = "太吾生产用自己姓氏",
@@ -271,7 +263,7 @@ return {
 			GroupName = "新生儿取名",
 			DefaultValue = true,
 		},
-		[29] = {
+		[28] = {
 			SettingType = "Toggle",
 			Key = "PartnerBirthUseMotherSurname",
 			DisplayName = "伴侣生产用母亲姓氏",
@@ -279,7 +271,7 @@ return {
 			GroupName = "新生儿取名",
 			DefaultValue = false,
 		},
-		[30] = {
+		[29] = {
 			SettingType = "Toggle",
 			Key = "BirthFallbackManualNaming",
 			DisplayName = "未命中姓氏时亲自取名",
@@ -287,7 +279,7 @@ return {
 			GroupName = "新生儿取名",
 			DefaultValue = false,
 		},
-		[31] = {
+		[30] = {
 			SettingType = "InputField",
 			Key = "BirthGenerationCharacter",
 			DisplayName = "自定义字辈",
@@ -295,7 +287,7 @@ return {
 			GroupName = "新生儿取名",
 			DefaultValue = "",
 		},
-		[32] = {
+		[31] = {
 			SettingType = "InputField",
 			Key = "BirthGivenNameSuffix",
 			DisplayName = "自定义名尾",
@@ -307,7 +299,7 @@ return {
 		-- ========================================
 		-- 智能选择功能
 		-- ========================================
-		[33] = {
+		[32] = {
 			SettingType = "Toggle",
 			Key = "EnableFrontendAutoSelectCategory",
 			DisplayName = "智能选择总开关",
@@ -315,7 +307,7 @@ return {
 			GroupName = "智能选择功能",
 			DefaultValue = false,
 		},
-		[34] = {
+		[33] = {
 			SettingType = "Toggle",
 			Key = "EnableFrontendKeywordSelect",
 			DisplayName = "关键词选择",
@@ -323,7 +315,7 @@ return {
 			GroupName = "智能选择功能",
 			DefaultValue = false,
 		},
-		[35] = {
+		[34] = {
 			SettingType = "Toggle",
 			Key = "EnableFrontendRememberSelection",
 			DisplayName = "记录玩家手动选择",
@@ -331,7 +323,7 @@ return {
 			GroupName = "智能选择功能",
 			DefaultValue = false,
 		},
-		[36] = {
+		[35] = {
 			SettingType = "Toggle",
 			Key = "EnableFrontendMemorySelect",
 			DisplayName = "复用玩家记忆选择",
@@ -339,7 +331,7 @@ return {
 			GroupName = "智能选择功能",
 			DefaultValue = false,
 		},
-		[37] = {
+		[36] = {
 			SettingType = "Toggle",
 			Key = "EnableFrontendSingleOptionContinue",
 			DisplayName = "安全单选项继续",
@@ -347,7 +339,7 @@ return {
 			GroupName = "智能选择功能",
 			DefaultValue = false,
 		},
-		[38] = {
+		[37] = {
 			SettingType = "Toggle",
 			Key = "EnableAnySingleOptionContinue",
 			DisplayName = "所有单选项跳过",
@@ -355,7 +347,7 @@ return {
 			GroupName = "智能选择功能",
 			DefaultValue = false,
 		},
-		[39] = {
+		[38] = {
 			SettingType = "Toggle",
 			Key = "EnableCustomDialogSkip",
 			DisplayName = "自定义对话跳过",
@@ -363,7 +355,7 @@ return {
 			GroupName = "智能选择功能",
 			DefaultValue = false,
 		},
-		[40] = {
+		[39] = {
 			SettingType = "InputField",
 			Key = "CustomDialogSkipSuspendHotkey",
 			DisplayName = "禁用自定义对话快捷键",

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Text;
+using System.Threading;
 using GameData.Common;
 using GameData.Domains.Character;
 using HarmonyLib;
@@ -14,6 +16,7 @@ namespace AutoMonthlyEvent.Executor.Backend
         private static MethodInfo? _giftApplyChanges;
         private static FieldInfo? _requestAgreeField;
         private static FieldInfo? _giftRefusePoisonField;
+        private static long _diagnosticSequence;
 
         public static void Configure(BackendExecutorConfig config)
         {
@@ -26,7 +29,6 @@ namespace AutoMonthlyEvent.Executor.Backend
             {
                 Type? requestType = AccessTools.TypeByName("GameData.Domains.Character.Ai.GeneralAction.WealthDemand.RequestItemAction");
                 Type? giftType = AccessTools.TypeByName("GameData.Domains.Character.Ai.GeneralAction.BehaviorAction.GiveItemAction");
-                Type? monthlyCollectionType = AccessTools.TypeByName("GameData.Domains.World.MonthlyEvent.MonthlyEventCollection");
                 Type[] parameters = { typeof(DataContext), typeof(Character), typeof(Character) };
 
                 if (requestType != null)
@@ -61,36 +63,144 @@ namespace AutoMonthlyEvent.Executor.Backend
                     }
                 }
 
-                MethodInfo? makeLoveMethod = null;
-                if (monthlyCollectionType != null)
-                {
-                    List<MethodInfo> methods = AccessTools.GetDeclaredMethods(monthlyCollectionType);
-                    foreach (MethodInfo method in methods)
-                    {
-                        if (method.Name == "AddMakeLoveWithTaiwu")
-                        {
-                            makeLoveMethod = method;
-                            break;
-                        }
-                    }
-                }
-
-                if (makeLoveMethod != null)
-                {
-                    harmony.Patch(makeLoveMethod, prefix: new HarmonyMethod(typeof(BackendEventInterceptor), nameof(MakeLoveEventPrefix)));
-                    BackendActionLogger.Log("install-make-love", "installed", "MonthlyEventCollection.AddMakeLoveWithTaiwu patch installed");
-                }
-                else
-                {
-                    BackendActionLogger.Log("install-make-love", "skip", "AddMakeLoveWithTaiwu method missing");
-                }
-
+                InstallSettlementDiagnostics(harmony);
                 BackendActionLogger.Log("install-prenatal-education", "observe-only", "AddPrenatalEducationTaiwu is intentionally not swallowed in v1");
             }
             catch (Exception ex)
             {
                 BackendActionLogger.Log("install", "failed", "Backend interceptor install failed", exception: ex);
             }
+        }
+
+        private static void InstallSettlementDiagnostics(Harmony harmony)
+        {
+            var patched = new HashSet<MethodBase>();
+            Type? monthlyCollectionType = AccessTools.TypeByName("GameData.Domains.World.MonthlyEvent.MonthlyEventCollection");
+            Type? taiwuEventDomainType = AccessTools.TypeByName("GameData.Domains.TaiwuEvent.TaiwuEventDomain");
+
+            PatchNamedMethods(harmony, monthlyCollectionType, patched,
+                name => name == "AddMakeLoveWithTaiwu");
+            PatchNamedMethods(harmony, taiwuEventDomainType, patched,
+                name => name == "EventSelect");
+            PatchNamedMethods(harmony, typeof(CharacterDomain), patched,
+                IsSettlementDiagnosticMethod);
+            PatchNamedMethods(harmony, typeof(Character), patched,
+                IsSettlementDiagnosticMethod);
+
+            BackendActionLogger.Log(
+                "install-settlement-diagnostics",
+                "installed",
+                $"observer patches={patched.Count}; no original method is skipped");
+        }
+
+        private static void PatchNamedMethods(
+            Harmony harmony,
+            Type? type,
+            HashSet<MethodBase> patched,
+            Func<string, bool> predicate)
+        {
+            if (type == null)
+                return;
+
+            foreach (MethodInfo method in AccessTools.GetDeclaredMethods(type))
+            {
+                if (!predicate(method.Name) || method.IsAbstract || method.ContainsGenericParameters || !patched.Add(method))
+                    continue;
+
+                try
+                {
+                    harmony.Patch(
+                        method,
+                        prefix: new HarmonyMethod(typeof(BackendEventInterceptor), nameof(SettlementDiagnosticPrefix)),
+                        postfix: new HarmonyMethod(typeof(BackendEventInterceptor), nameof(SettlementDiagnosticPostfix)));
+                    BackendActionLogger.Log(
+                        "install-settlement-observer",
+                        "installed",
+                        DescribeMethod(method));
+                }
+                catch (Exception ex)
+                {
+                    patched.Remove(method);
+                    BackendActionLogger.Log(
+                        "install-settlement-observer",
+                        "failed",
+                        DescribeMethod(method),
+                        exception: ex);
+                }
+            }
+        }
+
+        private static bool IsSettlementDiagnosticMethod(string name)
+        {
+            return name.IndexOf("Pregnant", StringComparison.OrdinalIgnoreCase) >= 0
+                || name.IndexOf("Pregnancy", StringComparison.OrdinalIgnoreCase) >= 0
+                || name.IndexOf("MakeLove", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static void SettlementDiagnosticPrefix(MethodBase __originalMethod, object[] __args, out long __state)
+        {
+            __state = Interlocked.Increment(ref _diagnosticSequence);
+            BackendExecutorConfig? config = _config;
+            if (config == null || !config.EnableDebugLog)
+                return;
+
+            string reason = $"seq={__state}; phase=enter; method={DescribeMethod(__originalMethod)}; args={DescribeArgs(__args)}";
+            if (__originalMethod.Name == "AddMakeLoveWithTaiwu")
+                reason += "; stack=" + CompactStackTrace();
+            BackendActionLogger.Log("settlement-trace", "observe", reason);
+        }
+
+        private static void SettlementDiagnosticPostfix(MethodBase __originalMethod, object[] __args, long __state)
+        {
+            BackendExecutorConfig? config = _config;
+            if (config == null || !config.EnableDebugLog)
+                return;
+
+            BackendActionLogger.Log(
+                "settlement-trace",
+                "observe",
+                $"seq={__state}; phase=exit; method={DescribeMethod(__originalMethod)}; args={DescribeArgs(__args)}");
+        }
+
+        private static string DescribeMethod(MethodBase method)
+        {
+            return $"{method.DeclaringType?.FullName}.{method.Name}";
+        }
+
+        private static string DescribeArgs(object[]? args)
+        {
+            if (args == null || args.Length == 0)
+                return "[]";
+
+            var builder = new StringBuilder("[");
+            for (int i = 0; i < args.Length; i++)
+            {
+                if (i > 0)
+                    builder.Append(", ");
+                builder.Append(i).Append('=').Append(DescribeArg(args[i]));
+            }
+            return builder.Append(']').ToString();
+        }
+
+        private static string DescribeArg(object? value)
+        {
+            if (value == null)
+                return "null";
+            if (value is Character character)
+                return $"Character#{GetCharId(character)}";
+            if (value is string text)
+                return text.Length <= 80 ? $"\"{text}\"" : $"\"{text.Substring(0, 80)}...\"";
+            Type type = value.GetType();
+            if (type.IsPrimitive || type.IsEnum || value is decimal || value is Guid)
+                return Convert.ToString(value) ?? type.Name;
+            return type.FullName ?? type.Name;
+        }
+
+        private static string CompactStackTrace()
+        {
+            string[] lines = Environment.StackTrace.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            int count = Math.Min(lines.Length, 8);
+            return string.Join(" <- ", lines, 0, count);
         }
 
         private static bool RequestItemPrefix(object __instance, DataContext context, Character selfChar, Character targetChar)
@@ -150,19 +260,6 @@ namespace AutoMonthlyEvent.Executor.Backend
                 BackendActionLogger.Log("give-item", "pass-exception", "ApplyChanges failed; falling back to original flow", GetCharId(selfChar), GetCharId(targetChar), ex);
                 return true;
             }
-        }
-
-        private static bool MakeLoveEventPrefix()
-        {
-            BackendExecutorConfig? config = _config;
-            if (config == null || !config.EffectiveMakeLoveInterceptor)
-            {
-                BackendActionLogger.Log("make-love", "pass", "backend make-love interceptor disabled");
-                return true;
-            }
-
-            BackendActionLogger.Log("make-love", "skip-add", "blocked AddMakeLoveWithTaiwu monthly event");
-            return false;
         }
 
         private static int GetCharId(Character? character)

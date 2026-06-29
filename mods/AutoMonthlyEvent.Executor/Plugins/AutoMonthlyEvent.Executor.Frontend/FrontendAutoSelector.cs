@@ -24,6 +24,7 @@ namespace AutoMonthlyEvent.Executor.Frontend
         private static bool _customSkipSuspended;
         private static HotkeyBinding _suspendHotkey = HotkeyBinding.Empty;
         private static CToggle? _markCustomSkipToggle;
+        private static TextMeshProUGUI? _customSkipStatusText;
 
         public static void Configure(ExecutorConfig config)
         {
@@ -32,6 +33,7 @@ namespace AutoMonthlyEvent.Executor.Frontend
             _isAutoSelecting = false;
             _customSkipSuspended = false;
             _suspendHotkey = HotkeyBinding.Parse(config.CustomDialogSkipSuspendHotkey);
+            RefreshCustomSkipStatus();
             _customMemoryFilePath = string.IsNullOrWhiteSpace(config.ModDirectoryPath)
                 ? string.Empty
                 : Path.Combine(config.ModDirectoryPath, "UserData", "custom_dialog_skip.tsv");
@@ -288,7 +290,21 @@ namespace AutoMonthlyEvent.Executor.Frontend
                 return;
 
             _customSkipSuspended = !_customSkipSuspended;
+            RefreshCustomSkipStatus();
             ActionLogger.Debug("custom-dialog-suspend-toggle", string.Empty, "customDialogSkip", _customSkipSuspended ? "玩家自定义对话跳过：已全局暂停" : "玩家自定义对话跳过：已恢复");
+        }
+
+        private static void RefreshCustomSkipStatus()
+        {
+            if (_customSkipStatusText == null)
+                return;
+
+            _customSkipStatusText.text = _customSkipSuspended
+                ? "自定义跳过：已暂停"
+                : "自定义跳过：运行中";
+            _customSkipStatusText.color = _customSkipSuspended
+                ? new Color(0.92f, 0.42f, 0.34f, 1f)
+                : new Color(0.42f, 0.78f, 0.52f, 1f);
         }
 
         private static bool CanAutoSelectNow(object eventWindow)
@@ -463,7 +479,10 @@ namespace AutoMonthlyEvent.Executor.Frontend
 
             TextMeshProUGUI labelText = CreateLabel(row.transform, label, sourceText);
             CToggle toggle = CreateSwitch(row.transform, name);
+            _customSkipStatusText = CreateStatusLabel(row.transform, sourceText);
+            RefreshCustomSkipStatus();
             AddTooltip(labelText.gameObject, description);
+            AddTooltip(_customSkipStatusText.gameObject, "快捷键会全局暂停或恢复玩家记忆的自定义对话自动选择。");
             return toggle;
         }
 
@@ -487,6 +506,29 @@ namespace AutoMonthlyEvent.Executor.Frontend
             text.raycastTarget = true;
             LayoutElement layout = labelGo.AddComponent<LayoutElement>();
             layout.preferredWidth = 136f;
+            layout.preferredHeight = 34f;
+            return text;
+        }
+
+        private static TextMeshProUGUI CreateStatusLabel(Transform parent, TextMeshProUGUI sourceText)
+        {
+            GameObject statusGo = new GameObject("CustomSkipStatus");
+            RectTransform rect = statusGo.AddComponent<RectTransform>();
+            rect.SetParent(parent, false);
+            rect.sizeDelta = new Vector2(210f, 34f);
+
+            TextMeshProUGUI text = statusGo.AddComponent<TextMeshProUGUI>();
+            text.fontSize = 16f;
+            text.alignment = TextAlignmentOptions.Left;
+            text.raycastTarget = true;
+            if (sourceText != null)
+            {
+                text.font = sourceText.font;
+                text.fontSharedMaterial = sourceText.fontSharedMaterial;
+            }
+
+            LayoutElement layout = statusGo.AddComponent<LayoutElement>();
+            layout.preferredWidth = 210f;
             layout.preferredHeight = 34f;
             return text;
         }
@@ -545,6 +587,7 @@ namespace AutoMonthlyEvent.Executor.Frontend
                 UnityEngine.Object.Destroy(row);
             }
             _markCustomSkipToggle = null;
+            _customSkipStatusText = null;
         }
 
         private sealed class PendingSelection

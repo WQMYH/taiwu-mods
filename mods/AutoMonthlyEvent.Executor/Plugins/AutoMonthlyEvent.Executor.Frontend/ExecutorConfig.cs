@@ -1,52 +1,41 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
-using System.Text.RegularExpressions;
 using GameData.Utilities;
-using UnityEngine;
 
 namespace AutoMonthlyEvent.Executor.Frontend
 {
     internal sealed class ExecutorConfig
     {
-        private const string ConfigFileName = "Config.lua";
-        private const string SettingsFileName = "Settings.Lua";
-        private const string ModDirectoryName = "AutoMonthlyEvent.Executor";
+        public bool EnableAutoExecute { get; private set; }
+        public bool DryRun { get; private set; }
+        public bool EnableRequestCategory { get; private set; }
+        public bool EnableResultCategory { get; private set; }
+        public bool EnableFamilyCategory { get; private set; }
+        public bool EnableFrontendAutoSelectCategory { get; private set; }
 
-        public bool EnableAutoExecute { get; private set; } = false;
-        public bool DryRun { get; private set; } = false;
-        public string UnknownPolicy { get; private set; } = "WaitPlayer";
-        public bool EnableRequestCategory { get; private set; } = false;
-        public bool EnableResultCategory { get; private set; } = false;
-        public bool EnableFamilyCategory { get; private set; } = false;
-        public bool EnableSocialContestCategory { get; private set; } = false;
-        public bool EnableFrontendAutoSelectCategory { get; private set; } = false;
-        public bool EnableBackendInterceptorCategory { get; private set; } = false;
-        private bool _enableFrontendKeywordSelect = false;
-        private bool _enableFrontendRememberSelection = false;
-        private bool _enableFrontendMemorySelect = false;
-        private bool _enableFrontendSingleOptionContinue = false;
-        private bool _enableAnySingleOptionContinue = false;
+        private bool _enableFrontendKeywordSelect;
+        private bool _enableFrontendRememberSelection;
+        private bool _enableFrontendMemorySelect;
+        private bool _enableFrontendSingleOptionContinue;
+        private bool _enableAnySingleOptionContinue;
+        private bool _autoContinueWhitelistedResults;
+        private bool _enableMonthlyRequest;
+        private bool _enableResourceRequest = true;
+        private bool _enableTeaWineItemRequest = true;
+        private bool _enableRequestResultContinue;
+        private bool _enableGuidanceResultContinue;
+        private bool _enableAdoptAbandonedBaby;
+        private bool _enablePrenatalEducation;
+        private bool _enablePrenatalEducationResultContinue;
+        private bool _enableBirthNaming;
+
         public bool EnableFrontendKeywordSelect => EnableFrontendAutoSelectCategory && _enableFrontendKeywordSelect;
         public bool EnableFrontendRememberSelection => _enableFrontendRememberSelection;
         public bool EnableFrontendMemorySelect => EnableFrontendAutoSelectCategory && _enableFrontendMemorySelect;
         public bool EnableFrontendSingleOptionContinue => EnableFrontendAutoSelectCategory && _enableFrontendSingleOptionContinue;
         public bool EnableAnySingleOptionContinue => EnableFrontendAutoSelectCategory && _enableAnySingleOptionContinue;
-        private bool _autoContinueWhitelistedResults = false;
         public bool AutoContinueWhitelistedResults => EnableResultCategory && _autoContinueWhitelistedResults;
-        public string RequestDirection { get; private set; } = "NpcToTaiwu";
-        public int RequestRelationMode { get; private set; } = 3;
-        public int FallbackFavorabilityThreshold { get; private set; } = 15000;
-        private bool _enableMonthlyRequest = false;
-        private bool _enableResourceRequest = false;
-        private bool _enableTeaWineItemRequest = false;
-        private bool _enableRequestResultContinue = false;
-        private bool _enableGuidanceResultContinue = false;
-        private bool _enableAdoptAbandonedBaby = false;
-        private bool _enablePrenatalEducation = false;
-        private bool _enablePrenatalEducationResultContinue = false;
-        private bool _enableBirthNaming = false;
         public bool EnableMonthlyRequest => EnableRequestCategory && _enableMonthlyRequest;
         public bool EnableResourceRequest => EnableRequestCategory && _enableResourceRequest;
         public bool EnableTeaWineItemRequest => EnableRequestCategory && _enableTeaWineItemRequest;
@@ -54,210 +43,232 @@ namespace AutoMonthlyEvent.Executor.Frontend
         public bool EnableGuidanceResultContinue => EnableResultCategory && _enableGuidanceResultContinue;
         public bool EnableAdoptAbandonedBaby => EnableFamilyCategory && _enableAdoptAbandonedBaby;
         public bool EnablePrenatalEducation => EnableFamilyCategory && _enablePrenatalEducation;
-        public bool EnablePrenatalEducationResultContinue => EnableFamilyCategory && _enablePrenatalEducation && _enablePrenatalEducationResultContinue;
+        public bool EnablePrenatalEducationResultContinue =>
+            EnableFamilyCategory && _enablePrenatalEducation && _enablePrenatalEducationResultContinue;
         public bool EnableBirthNaming => EnableFamilyCategory && _enableBirthNaming;
+
+        public int RequestRelationMode { get; private set; } = 3;
+        public int FallbackFavorabilityThreshold { get; private set; } = 15000;
         public int PrenatalEducationChoice { get; private set; } = 3;
         public int AdoptionMaxChildAge { get; private set; } = 3;
         public bool TaiwuBirthUseOwnSurname { get; private set; } = true;
-        public bool PartnerBirthUseMotherSurname { get; private set; } = false;
-        public bool BirthFallbackManualNaming { get; private set; } = false;
+        public bool PartnerBirthUseMotherSurname { get; private set; }
+        public bool BirthFallbackManualNaming { get; private set; }
         public string BirthGenerationCharacter { get; private set; } = string.Empty;
         public string BirthGivenNameSuffix { get; private set; } = string.Empty;
-        public bool EnablePresetCustomDialogSkip { get; private set; } = false;
-        public bool EnableCustomDialogSkip { get; private set; } = false;
+        public bool EnableCustomDialogSkip { get; private set; }
         public string CustomDialogSkipSuspendHotkey { get; private set; } = "Ctrl+A";
         public bool EnableActionLog { get; private set; } = true;
         public bool EnableDebugLog { get; private set; } = true;
         public string LogDirectory { get; private set; } = "Logs";
-        public string ActionLogFileName { get; private set; } = "executor_actions.jsonl";
-        public string HumanLogFileName { get; private set; } = "executor_actions.log";
-        public string DebugLogFileName { get; private set; } = "executor_debug.jsonl";
-        public string DebugHumanLogFileName { get; private set; } = "executor_debug.log";
-        public HashSet<ushort> AllowedRelationTypes { get; } = new HashSet<ushort> { 1024, 1, 2, 8, 16, 64, 128, 512, 8192 };
+        public string ActionLogFileName { get; } = "executor_actions.jsonl";
+        public string HumanLogFileName { get; } = "executor_actions.log";
+        public string DebugLogFileName { get; } = "executor_debug.jsonl";
+        public string DebugHumanLogFileName { get; } = "executor_debug.log";
+        public HashSet<ushort> AllowedRelationTypes { get; } = new HashSet<ushort>();
         public HashSet<sbyte> AllowedAdoptionBehaviorTypes { get; } = new HashSet<sbyte> { 0, 1, 2 };
-
-        public string GameRootPath { get; private set; } = string.Empty;
         public string ModDirectoryPath { get; private set; } = string.Empty;
 
-        public static ExecutorConfig Load()
+        public static ExecutorConfig Load(string modIdStr)
         {
             var config = new ExecutorConfig();
-            config.GameRootPath = ResolveGameRoot();
-            config.ModDirectoryPath = ResolveModDirectory(config.GameRootPath);
-            string configPath = Path.Combine(config.ModDirectoryPath, ConfigFileName);
-            string settingsPath = Path.Combine(config.ModDirectoryPath, SettingsFileName);
-            string alternateSettingsPath = Path.Combine(config.ModDirectoryPath, "Settings.lua");
+            ApplySettings(config, modIdStr);
+            ResolveModDirectory(config, modIdStr);
 
-            try
-            {
-                AdaptableLog.Info($"[AutoMonthlyEvent.Executor] Config paths. GameRoot={config.GameRootPath}, ModDirectory={config.ModDirectoryPath}, ConfigExists={File.Exists(configPath)}, SettingsExists={File.Exists(settingsPath) || File.Exists(alternateSettingsPath)}");
-                if (!File.Exists(configPath))
-                {
-                    AdaptableLog.Warning($"[AutoMonthlyEvent.Executor] Config not found at {configPath}; using executor defaults.");
-                }
-                else
-                {
-                    ApplyContent(config, File.ReadAllText(configPath));
-                }
-
-                if (File.Exists(settingsPath))
-                    ApplyContent(config, File.ReadAllText(settingsPath));
-                else if (File.Exists(alternateSettingsPath))
-                    ApplyContent(config, File.ReadAllText(alternateSettingsPath));
-                else
-                    AdaptableLog.Warning($"[AutoMonthlyEvent.Executor] Settings not found at {settingsPath}; using Config.lua/default values.");
-
-                AdaptableLog.Info($"[AutoMonthlyEvent.Executor] Config loaded. EnableAutoExecute={config.EnableAutoExecute}, DryRun={config.DryRun}, EnableActionLog={config.EnableActionLog}, EnableDebugLog={config.EnableDebugLog}, LogDirectory={config.LogDirectory}, MonthlyRequest={config.EnableMonthlyRequest}, RequestResultContinue={config.EnableRequestResultContinue}, GuidanceResultContinue={config.EnableGuidanceResultContinue}, FamilyCategory={config.EnableFamilyCategory}, FrontendSingleOptionContinue={config.EnableFrontendSingleOptionContinue}");
-            }
-            catch (Exception ex)
-            {
-                AdaptableLog.Error($"[AutoMonthlyEvent.Executor] Failed to load config: {ex}");
-            }
-
+            AdaptableLog.Info(
+                $"[AutoMonthlyEvent.Executor] Frontend settings loaded from ModManager. " +
+                $"ModId={modIdStr}, ModDirectory={config.ModDirectoryPath}, " +
+                $"EnableAutoExecute={config.EnableAutoExecute}, DryRun={config.DryRun}, " +
+                $"RequestCategory={config.EnableRequestCategory}, MonthlyRequest={config.EnableMonthlyRequest}, " +
+                $"ResultCategory={config.EnableResultCategory}, FamilyCategory={config.EnableFamilyCategory}, " +
+                $"FrontendAutoSelectCategory={config.EnableFrontendAutoSelectCategory}, " +
+                $"CustomDialogSkip={config.EnableCustomDialogSkip}");
             return config;
         }
 
-        private static void ApplyContent(ExecutorConfig config, string content)
+        private static void ApplySettings(ExecutorConfig config, string modIdStr)
         {
-            content = StripLuaLineComments(content);
-            config.EnableAutoExecute = ReadBool(content, nameof(EnableAutoExecute), config.EnableAutoExecute);
-            config.DryRun = ReadBool(content, nameof(DryRun), config.DryRun);
-            config.UnknownPolicy = ReadString(content, nameof(UnknownPolicy), config.UnknownPolicy);
-            config.EnableRequestCategory = ReadBool(content, nameof(EnableRequestCategory), config.EnableRequestCategory);
-            config.EnableResultCategory = ReadBool(content, nameof(EnableResultCategory), config.EnableResultCategory);
-            config.EnableFamilyCategory = ReadBool(content, nameof(EnableFamilyCategory), config.EnableFamilyCategory);
-            config.EnableSocialContestCategory = ReadBool(content, nameof(EnableSocialContestCategory), config.EnableSocialContestCategory);
-            config.EnableFrontendAutoSelectCategory = ReadBool(content, nameof(EnableFrontendAutoSelectCategory), config.EnableFrontendAutoSelectCategory);
-            config.EnableBackendInterceptorCategory = ReadBool(content, nameof(EnableBackendInterceptorCategory), config.EnableBackendInterceptorCategory);
-            config._enableFrontendKeywordSelect = ReadBool(content, nameof(EnableFrontendKeywordSelect), config._enableFrontendKeywordSelect);
-            config._enableFrontendRememberSelection = ReadBool(content, nameof(EnableFrontendRememberSelection), config._enableFrontendRememberSelection);
-            config._enableFrontendMemorySelect = ReadBool(content, nameof(EnableFrontendMemorySelect), config._enableFrontendMemorySelect);
-            config._enableFrontendSingleOptionContinue = ReadBool(content, nameof(EnableFrontendSingleOptionContinue), config._enableFrontendSingleOptionContinue);
-            config._enableAnySingleOptionContinue = ReadBool(content, nameof(EnableAnySingleOptionContinue), config._enableAnySingleOptionContinue);
-            config._autoContinueWhitelistedResults = ReadBool(content, nameof(AutoContinueWhitelistedResults), config._autoContinueWhitelistedResults);
-            config.RequestDirection = ReadString(content, nameof(RequestDirection), config.RequestDirection);
-            config.RequestRelationMode = NormalizeRequestRelationMode(ReadInt(content, nameof(RequestRelationMode), config.RequestRelationMode));
-            ResetAllowedRelationTypesFromMode(config);
-            config.FallbackFavorabilityThreshold = ReadInt(content, nameof(FallbackFavorabilityThreshold), config.FallbackFavorabilityThreshold);
-            config._enableMonthlyRequest = ReadBool(content, nameof(EnableMonthlyRequest), config._enableMonthlyRequest);
-            config._enableResourceRequest = ReadBool(content, nameof(EnableResourceRequest), config._enableResourceRequest);
-            config._enableTeaWineItemRequest = ReadBool(content, nameof(EnableTeaWineItemRequest), config._enableTeaWineItemRequest);
-            config._enableRequestResultContinue = ReadBool(content, nameof(EnableRequestResultContinue), config._enableRequestResultContinue);
-            config._enableGuidanceResultContinue = ReadBool(content, nameof(EnableGuidanceResultContinue), config._enableGuidanceResultContinue);
-            config._enableAdoptAbandonedBaby = ReadBool(content, nameof(EnableAdoptAbandonedBaby), config._enableAdoptAbandonedBaby);
-            config._enablePrenatalEducation = ReadBool(content, nameof(EnablePrenatalEducation), config._enablePrenatalEducation);
-            config._enablePrenatalEducationResultContinue = ReadBool(content, nameof(EnablePrenatalEducationResultContinue), config._enablePrenatalEducationResultContinue);
-            config._enableBirthNaming = ReadBool(content, nameof(EnableBirthNaming), config._enableBirthNaming);
-            config.PrenatalEducationChoice = NormalizePrenatalEducationChoice(ReadInt(content, nameof(PrenatalEducationChoice), config.PrenatalEducationChoice));
-            config.AdoptionMaxChildAge = ReadInt(content, nameof(AdoptionMaxChildAge), config.AdoptionMaxChildAge);
-            config.TaiwuBirthUseOwnSurname = ReadBool(content, nameof(TaiwuBirthUseOwnSurname), config.TaiwuBirthUseOwnSurname);
-            config.PartnerBirthUseMotherSurname = ReadBool(content, nameof(PartnerBirthUseMotherSurname), config.PartnerBirthUseMotherSurname);
-            config.BirthFallbackManualNaming = ReadBool(content, nameof(BirthFallbackManualNaming), config.BirthFallbackManualNaming);
-            config.BirthGenerationCharacter = NormalizeOneChar(ReadString(content, nameof(BirthGenerationCharacter), config.BirthGenerationCharacter));
-            config.BirthGivenNameSuffix = NormalizeOneChar(ReadString(content, nameof(BirthGivenNameSuffix), config.BirthGivenNameSuffix));
-            config.EnablePresetCustomDialogSkip = ReadBool(content, nameof(EnablePresetCustomDialogSkip), config.EnablePresetCustomDialogSkip);
-            config.EnableCustomDialogSkip = ReadBool(content, nameof(EnableCustomDialogSkip), config.EnableCustomDialogSkip);
-            config.CustomDialogSkipSuspendHotkey = ReadString(content, nameof(CustomDialogSkipSuspendHotkey), config.CustomDialogSkipSuspendHotkey).Trim();
-            config.EnableActionLog = ReadBool(content, nameof(EnableActionLog), config.EnableActionLog);
-            config.EnableDebugLog = ReadBool(content, nameof(EnableDebugLog), config.EnableDebugLog);
-            config.LogDirectory = SanitizeRelativePath(ReadString(content, nameof(LogDirectory), config.LogDirectory), "Logs");
-            config.ActionLogFileName = SanitizeFileName(ReadString(content, nameof(ActionLogFileName), config.ActionLogFileName), "executor_actions.jsonl");
-            config.HumanLogFileName = SanitizeFileName(ReadString(content, nameof(HumanLogFileName), config.HumanLogFileName), "executor_actions.log");
-            config.DebugLogFileName = SanitizeFileName(ReadString(content, nameof(DebugLogFileName), config.DebugLogFileName), "executor_debug.jsonl");
-            config.DebugHumanLogFileName = SanitizeFileName(ReadString(content, nameof(DebugHumanLogFileName), config.DebugHumanLogFileName), "executor_debug.log");
+            config.EnableAutoExecute = ReadSetting(modIdStr, nameof(EnableAutoExecute), config.EnableAutoExecute);
+            config.DryRun = ReadSetting(modIdStr, nameof(DryRun), config.DryRun);
+            config.EnableActionLog = ReadSetting(modIdStr, nameof(EnableActionLog), config.EnableActionLog);
+            config.EnableDebugLog = ReadSetting(modIdStr, nameof(EnableDebugLog), config.EnableDebugLog);
+            config.LogDirectory = SanitizeRelativePath(
+                ReadSetting(modIdStr, nameof(LogDirectory), config.LogDirectory), "Logs");
 
-            List<int> relations = ReadIntList(content, nameof(AllowedRelationTypes));
-            if (relations.Count > 0)
+            config.EnableRequestCategory = ReadSetting(modIdStr, nameof(EnableRequestCategory), config.EnableRequestCategory);
+            config._enableMonthlyRequest = ReadSetting(modIdStr, nameof(EnableMonthlyRequest), config._enableMonthlyRequest);
+            config._enableResourceRequest = ReadSetting(modIdStr, nameof(EnableResourceRequest), config._enableResourceRequest);
+            config._enableTeaWineItemRequest = ReadSetting(modIdStr, nameof(EnableTeaWineItemRequest), config._enableTeaWineItemRequest);
+            config.RequestRelationMode = NormalizeRequestRelationMode(
+                ReadSetting(modIdStr, nameof(RequestRelationMode), config.RequestRelationMode));
+            config.FallbackFavorabilityThreshold = ReadSetting(
+                modIdStr, nameof(FallbackFavorabilityThreshold), config.FallbackFavorabilityThreshold);
+            ResetAllowedRelationTypes(config);
+
+            config.EnableResultCategory = ReadSetting(modIdStr, nameof(EnableResultCategory), config.EnableResultCategory);
+            config._autoContinueWhitelistedResults = ReadSetting(
+                modIdStr, nameof(AutoContinueWhitelistedResults), config._autoContinueWhitelistedResults);
+            config._enableRequestResultContinue = ReadSetting(
+                modIdStr, nameof(EnableRequestResultContinue), config._enableRequestResultContinue);
+            config._enableGuidanceResultContinue = ReadSetting(
+                modIdStr, nameof(EnableGuidanceResultContinue), config._enableGuidanceResultContinue);
+
+            config.EnableFamilyCategory = ReadSetting(modIdStr, nameof(EnableFamilyCategory), config.EnableFamilyCategory);
+            config._enableAdoptAbandonedBaby = ReadSetting(
+                modIdStr, nameof(EnableAdoptAbandonedBaby), config._enableAdoptAbandonedBaby);
+            config.AdoptionMaxChildAge = ReadSetting(modIdStr, nameof(AdoptionMaxChildAge), config.AdoptionMaxChildAge);
+            string behaviorTypes = ReadSetting(
+                modIdStr, nameof(AllowedAdoptionBehaviorTypes), "0,1,2");
+            ApplyAdoptionBehaviorTypes(config, behaviorTypes);
+            config._enablePrenatalEducation = ReadSetting(
+                modIdStr, nameof(EnablePrenatalEducation), config._enablePrenatalEducation);
+            config.PrenatalEducationChoice = NormalizePrenatalEducationChoice(
+                ReadSetting(modIdStr, nameof(PrenatalEducationChoice), config.PrenatalEducationChoice));
+            config._enablePrenatalEducationResultContinue = ReadSetting(
+                modIdStr, nameof(EnablePrenatalEducationResultContinue), config._enablePrenatalEducationResultContinue);
+            config._enableBirthNaming = ReadSetting(modIdStr, nameof(EnableBirthNaming), config._enableBirthNaming);
+            config.TaiwuBirthUseOwnSurname = ReadSetting(
+                modIdStr, nameof(TaiwuBirthUseOwnSurname), config.TaiwuBirthUseOwnSurname);
+            config.PartnerBirthUseMotherSurname = ReadSetting(
+                modIdStr, nameof(PartnerBirthUseMotherSurname), config.PartnerBirthUseMotherSurname);
+            config.BirthFallbackManualNaming = ReadSetting(
+                modIdStr, nameof(BirthFallbackManualNaming), config.BirthFallbackManualNaming);
+            config.BirthGenerationCharacter = NormalizeOneChar(
+                ReadSetting(modIdStr, nameof(BirthGenerationCharacter), config.BirthGenerationCharacter));
+            config.BirthGivenNameSuffix = NormalizeOneChar(
+                ReadSetting(modIdStr, nameof(BirthGivenNameSuffix), config.BirthGivenNameSuffix));
+
+            config.EnableFrontendAutoSelectCategory = ReadSetting(
+                modIdStr, nameof(EnableFrontendAutoSelectCategory), config.EnableFrontendAutoSelectCategory);
+            config._enableFrontendKeywordSelect = ReadSetting(
+                modIdStr, nameof(EnableFrontendKeywordSelect), config._enableFrontendKeywordSelect);
+            config._enableFrontendRememberSelection = ReadSetting(
+                modIdStr, nameof(EnableFrontendRememberSelection), config._enableFrontendRememberSelection);
+            config._enableFrontendMemorySelect = ReadSetting(
+                modIdStr, nameof(EnableFrontendMemorySelect), config._enableFrontendMemorySelect);
+            config._enableFrontendSingleOptionContinue = ReadSetting(
+                modIdStr, nameof(EnableFrontendSingleOptionContinue), config._enableFrontendSingleOptionContinue);
+            config._enableAnySingleOptionContinue = ReadSetting(
+                modIdStr, nameof(EnableAnySingleOptionContinue), config._enableAnySingleOptionContinue);
+            config.EnableCustomDialogSkip = ReadSetting(
+                modIdStr, nameof(EnableCustomDialogSkip), config.EnableCustomDialogSkip);
+            config.CustomDialogSkipSuspendHotkey = ReadSetting(
+                modIdStr, nameof(CustomDialogSkipSuspendHotkey), config.CustomDialogSkipSuspendHotkey).Trim();
+        }
+
+        private static bool ReadSetting(string modIdStr, string key, bool fallback)
+        {
+            bool value = fallback;
+            try
             {
-                config.AllowedRelationTypes.Clear();
-                foreach (int relation in relations)
-                {
-                    if (relation >= 0 && relation <= ushort.MaxValue)
-                        config.AllowedRelationTypes.Add((ushort)relation);
-                }
+                if (!global::ModManager.GetSetting(modIdStr, key, ref value))
+                    AdaptableLog.Warning($"[AutoMonthlyEvent.Executor] Frontend setting not found: {key}");
+            }
+            catch (Exception ex)
+            {
+                AdaptableLog.Warning($"[AutoMonthlyEvent.Executor] Failed to read frontend setting {key}: {ex.Message}");
+            }
+            return value;
+        }
+
+        private static int ReadSetting(string modIdStr, string key, int fallback)
+        {
+            int value = fallback;
+            try
+            {
+                if (!global::ModManager.GetSetting(modIdStr, key, ref value))
+                    AdaptableLog.Warning($"[AutoMonthlyEvent.Executor] Frontend setting not found: {key}");
+            }
+            catch (Exception ex)
+            {
+                AdaptableLog.Warning($"[AutoMonthlyEvent.Executor] Failed to read frontend setting {key}: {ex.Message}");
+            }
+            return value;
+        }
+
+        private static string ReadSetting(string modIdStr, string key, string fallback)
+        {
+            string value = fallback;
+            try
+            {
+                if (!global::ModManager.GetSetting(modIdStr, key, ref value))
+                    AdaptableLog.Warning($"[AutoMonthlyEvent.Executor] Frontend setting not found: {key}");
+            }
+            catch (Exception ex)
+            {
+                AdaptableLog.Warning($"[AutoMonthlyEvent.Executor] Failed to read frontend setting {key}: {ex.Message}");
+            }
+            return value;
+        }
+
+        private static void ResolveModDirectory(ExecutorConfig config, string modIdStr)
+        {
+            try
+            {
+                var modInfo = global::ModManager.GetModInfo(modIdStr);
+                if (modInfo != null && !string.IsNullOrWhiteSpace(modInfo.DirectoryName))
+                    config.ModDirectoryPath = Path.GetFullPath(modInfo.DirectoryName);
+            }
+            catch (Exception ex)
+            {
+                AdaptableLog.Warning($"[AutoMonthlyEvent.Executor] Failed to resolve mod directory from ModInfo: {ex.Message}");
             }
 
-            List<int> behaviorTypes = ReadIntList(content, nameof(AllowedAdoptionBehaviorTypes));
-            if (behaviorTypes.Count > 0)
+            if (!string.IsNullOrWhiteSpace(config.ModDirectoryPath))
+                return;
+
+            try
             {
-                config.AllowedAdoptionBehaviorTypes.Clear();
-                foreach (int behaviorType in behaviorTypes)
-                {
-                    if (behaviorType >= 0 && behaviorType <= 4)
-                        config.AllowedAdoptionBehaviorTypes.Add((sbyte)behaviorType);
-                }
+                config.ModDirectoryPath = Path.Combine(
+                    Path.GetFullPath(global::ModManager.GetModRootFolder()),
+                    "AutoMonthlyEvent.Executor");
+                AdaptableLog.Warning(
+                    $"[AutoMonthlyEvent.Executor] Using fallback frontend mod directory: {config.ModDirectoryPath}");
+            }
+            catch (Exception ex)
+            {
+                config.ModDirectoryPath = string.Empty;
+                AdaptableLog.Warning(
+                    $"[AutoMonthlyEvent.Executor] File logs and dialog memory are unavailable: {ex.Message}");
             }
         }
 
-        private static string StripLuaLineComments(string content)
+        private static void ResetAllowedRelationTypes(ExecutorConfig config)
         {
-            return Regex.Replace(content, "--.*$", string.Empty, RegexOptions.Multiline);
-        }
-
-        private static bool ReadBool(string content, string key, bool fallback)
-        {
-            Match match = Regex.Match(content, key + "\\s*=\\s*(true|false)", RegexOptions.IgnoreCase);
-            if (!match.Success)
-                match = MatchDefaultValue(content, key, "(true|false)");
-            return match.Success ? string.Equals(match.Groups[1].Value, "true", StringComparison.OrdinalIgnoreCase) : fallback;
-        }
-
-        private static int ReadInt(string content, string key, int fallback)
-        {
-            Match match = Regex.Match(content, key + "\\s*=\\s*\"?(-?\\d+)\"?", RegexOptions.IgnoreCase);
-            if (!match.Success)
-                match = MatchDefaultValue(content, key, "\"?(-?\\d+)\"?");
-            return match.Success && int.TryParse(match.Groups[1].Value, out int value) ? value : fallback;
-        }
-
-        private static string ReadString(string content, string key, string fallback)
-        {
-            Match match = Regex.Match(content, key + "\\s*=\\s*\"([^\"]*)\"", RegexOptions.IgnoreCase);
-            if (!match.Success)
-                match = MatchDefaultValue(content, key, "\"([^\"]*)\"");
-            return match.Success ? match.Groups[1].Value : fallback;
-        }
-
-        private static List<int> ReadIntList(string content, string key)
-        {
-            var result = new List<int>();
-            Match match = Regex.Match(content, key + "\\s*=\\s*\\{([^}]*)\\}", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-            string valueText;
-            if (match.Success)
+            config.AllowedRelationTypes.Clear();
+            ushort[] values;
+            switch (config.RequestRelationMode)
             {
-                valueText = match.Groups[1].Value;
-            }
-            else
-            {
-                Match stringMatch = Regex.Match(content, key + "\\s*=\\s*\"([^\"]*)\"", RegexOptions.IgnoreCase);
-                if (!stringMatch.Success)
-                    stringMatch = MatchDefaultValue(content, key, "\"([^\"]*)\"");
-                if (!stringMatch.Success)
-                    return result;
-                valueText = stringMatch.Groups[1].Value;
+                case 1:
+                    values = new ushort[] { 1024, 1, 2 };
+                    break;
+                case 2:
+                    values = new ushort[] { 1024, 1, 2, 64, 128, 512 };
+                    break;
+                default:
+                    values = new ushort[] { 1024, 1, 2, 64, 128, 512, 8192 };
+                    break;
             }
 
-            foreach (Match item in Regex.Matches(valueText, "-?\\d+"))
+            foreach (ushort value in values)
+                config.AllowedRelationTypes.Add(value);
+        }
+
+        private static void ApplyAdoptionBehaviorTypes(ExecutorConfig config, string text)
+        {
+            var parsed = new HashSet<sbyte>();
+            foreach (string part in text.Split(','))
             {
-                if (int.TryParse(item.Value, out int value))
-                    result.Add(value);
+                if (sbyte.TryParse(part.Trim(), out sbyte value) && value >= 0 && value <= 4)
+                    parsed.Add(value);
             }
-            return result;
-        }
 
-        private static Match MatchDefaultValue(string content, string key, string valuePattern)
-        {
-            return Regex.Match(
-                content,
-                "Key\\s*=\\s*\"" + Regex.Escape(key) + "\"[\\s\\S]*?DefaultValue\\s*=\\s*" + valuePattern,
-                RegexOptions.IgnoreCase);
-        }
+            if (parsed.Count == 0)
+                return;
 
-        private static string SanitizeRelativePath(string value, string fallback)
-        {
-            if (string.IsNullOrWhiteSpace(value) || Path.IsPathRooted(value) || value.Contains(".."))
-                return fallback;
-            return value.Trim().Trim('\\', '/');
+            config.AllowedAdoptionBehaviorTypes.Clear();
+            foreach (sbyte value in parsed)
+                config.AllowedAdoptionBehaviorTypes.Add(value);
         }
 
         private static int NormalizeRequestRelationMode(int value)
@@ -265,131 +276,24 @@ namespace AutoMonthlyEvent.Executor.Frontend
             return value >= 1 && value <= 3 ? value : 3;
         }
 
-        private static void ResetAllowedRelationTypesFromMode(ExecutorConfig config)
-        {
-            config.AllowedRelationTypes.Clear();
-            ushort[] relations;
-            switch (config.RequestRelationMode)
-            {
-                case 1:
-                    relations = new ushort[] { 1024, 1, 2 };
-                    break;
-                case 2:
-                    relations = new ushort[] { 1024, 1, 2, 64, 128, 512 };
-                    break;
-                default:
-                    relations = new ushort[] { 1024, 1, 2, 64, 128, 512, 8192 };
-                    break;
-            }
-
-            foreach (ushort relation in relations)
-                config.AllowedRelationTypes.Add(relation);
-        }
-
         private static int NormalizePrenatalEducationChoice(int value)
         {
-            return value >= 1 && value <= 3 ? value : 1;
-        }
-
-        private static string SanitizeFileName(string value, string fallback)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-                return fallback;
-
-            foreach (char invalid in Path.GetInvalidFileNameChars())
-            {
-                if (value.IndexOf(invalid) >= 0)
-                    return fallback;
-            }
-            return value;
+            return value >= 1 && value <= 3 ? value : 3;
         }
 
         private static string NormalizeOneChar(string value)
         {
             if (string.IsNullOrWhiteSpace(value))
                 return string.Empty;
-
             value = value.Trim();
             return value.Length <= 1 ? value : value.Substring(0, 1);
         }
 
-        private static string ResolveGameRoot()
+        private static string SanitizeRelativePath(string value, string fallback)
         {
-            string fromCurrent = Directory.GetCurrentDirectory();
-            if (Directory.Exists(Path.Combine(fromCurrent, "Mod")))
-                return fromCurrent;
-
-            string fromDataPath = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
-            if (Directory.Exists(Path.Combine(fromDataPath, "Mod")))
-                return fromDataPath;
-
-            // Fallback to current directory
-            return fromCurrent;
-        }
-
-        private static string ResolveModDirectory(string gameRoot)
-        {
-            string? fromAssembly = TryResolveModDirectoryFromAssembly();
-            if (!string.IsNullOrEmpty(fromAssembly))
-                return fromAssembly;
-
-            string? fromScan = TryResolveModDirectoryByScanning(gameRoot);
-            if (!string.IsNullOrEmpty(fromScan))
-                return fromScan;
-
-            return Path.Combine(gameRoot, "Mod", ModDirectoryName);
-        }
-
-        private static string? TryResolveModDirectoryFromAssembly()
-        {
-            try
-            {
-                string assemblyPath = Assembly.GetExecutingAssembly().Location;
-                if (string.IsNullOrEmpty(assemblyPath))
-                    return null;
-
-                DirectoryInfo? directory = Directory.GetParent(assemblyPath);
-                while (directory != null)
-                {
-                    if (string.Equals(directory.Name, "Plugins", StringComparison.OrdinalIgnoreCase) && directory.Parent != null)
-                        return directory.Parent.FullName;
-
-                    if (File.Exists(Path.Combine(directory.FullName, ConfigFileName)) &&
-                        Directory.Exists(Path.Combine(directory.FullName, "Plugins")))
-                        return directory.FullName;
-
-                    directory = directory.Parent;
-                }
-            }
-            catch
-            {
-                return null;
-            }
-
-            return null;
-        }
-
-        private static string? TryResolveModDirectoryByScanning(string gameRoot)
-        {
-            try
-            {
-                string modRoot = Path.Combine(gameRoot, "Mod");
-                if (!Directory.Exists(modRoot))
-                    return null;
-
-                foreach (string directory in Directory.GetDirectories(modRoot))
-                {
-                    string pluginPath = Path.Combine(directory, "Plugins", "AutoMonthlyEvent.Executor.Frontend.dll");
-                    if (File.Exists(pluginPath))
-                        return directory;
-                }
-            }
-            catch
-            {
-                return null;
-            }
-
-            return null;
+            if (string.IsNullOrWhiteSpace(value) || Path.IsPathRooted(value) || value.Contains(".."))
+                return fallback;
+            return value.Trim().Trim('\\', '/');
         }
     }
 }

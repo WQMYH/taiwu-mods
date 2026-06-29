@@ -14,7 +14,6 @@ namespace AutoMonthlyEvent.Executor.Backend
         public bool EnableFamilyCategory { get; private set; }
         public bool EnableBackendItemRequestInterceptor { get; private set; }
         public bool EnableBackendGiftInterceptor { get; private set; }
-        public bool EnableBackendMakeLoveInterceptor { get; private set; }
         public bool EnableActionLog { get; private set; } = true;
         public bool EnableDebugLog { get; private set; } = true;
         public string LogDirectory { get; private set; } = "Logs";
@@ -22,7 +21,6 @@ namespace AutoMonthlyEvent.Executor.Backend
 
         public bool EffectiveItemRequestInterceptor => EnableAutoExecute && EnableRequestCategory && EnableBackendItemRequestInterceptor;
         public bool EffectiveGiftInterceptor => EnableAutoExecute && EnableRequestCategory && EnableBackendGiftInterceptor;
-        public bool EffectiveMakeLoveInterceptor => EnableAutoExecute && EnableFamilyCategory && EnableBackendMakeLoveInterceptor;
 
         public static BackendExecutorConfig Load(string modIdStr)
         {
@@ -34,7 +32,6 @@ namespace AutoMonthlyEvent.Executor.Backend
                 config.EnableFamilyCategory = ReadSetting(modIdStr, nameof(EnableFamilyCategory), config.EnableFamilyCategory);
                 config.EnableBackendItemRequestInterceptor = ReadSetting(modIdStr, nameof(EnableBackendItemRequestInterceptor), config.EnableBackendItemRequestInterceptor);
                 config.EnableBackendGiftInterceptor = ReadSetting(modIdStr, nameof(EnableBackendGiftInterceptor), config.EnableBackendGiftInterceptor);
-                config.EnableBackendMakeLoveInterceptor = ReadSetting(modIdStr, nameof(EnableBackendMakeLoveInterceptor), config.EnableBackendMakeLoveInterceptor);
                 config.EnableActionLog = ReadSetting(modIdStr, nameof(EnableActionLog), config.EnableActionLog);
                 config.EnableDebugLog = ReadSetting(modIdStr, nameof(EnableDebugLog), config.EnableDebugLog);
                 config.LogDirectory = ReadSetting(modIdStr, nameof(LogDirectory), config.LogDirectory);
@@ -55,7 +52,7 @@ namespace AutoMonthlyEvent.Executor.Backend
                 Logger.Warn(ex, "[AutoMonthlyEvent.Executor] Backend file logging is unavailable because the mod directory could not be resolved.");
             }
 
-            Logger.Info($"[AutoMonthlyEvent.Executor] Backend settings loaded from ModDomain. ModId={modIdStr}, ModDirectory={config.ModDirectoryPath}, EnableAutoExecute={config.EnableAutoExecute}, RequestCategory={config.EnableRequestCategory}, FamilyCategory={config.EnableFamilyCategory}, Item={config.EnableBackendItemRequestInterceptor}, Gift={config.EnableBackendGiftInterceptor}, MakeLove={config.EnableBackendMakeLoveInterceptor}, LogDirectory={config.LogDirectory}");
+            Logger.Info($"[AutoMonthlyEvent.Executor] Backend settings loaded from ModDomain. ModId={modIdStr}, ModDirectory={config.ModDirectoryPath}, EnableAutoExecute={config.EnableAutoExecute}, RequestCategory={config.EnableRequestCategory}, FamilyCategory={config.EnableFamilyCategory}, Item={config.EnableBackendItemRequestInterceptor}, Gift={config.EnableBackendGiftInterceptor}, LogDirectory={config.LogDirectory}");
             return config;
         }
 
