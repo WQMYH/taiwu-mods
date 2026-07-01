@@ -1,0 +1,3 @@
+Table,TemplateId,Field,ValueType,Value
+CombatSkill,0,Name,string,示例功法名
+CombatSkill,0,Desc,string,示例功法说明

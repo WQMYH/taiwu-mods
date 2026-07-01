@@ -1,0 +1,10 @@
+{
+  "SchemaVersion": 1,
+  "Routes": {
+    "InitialVillage": "full_positive_villager",
+    "ManualCreate": "full_positive_villager",
+    "RecruitCreated": "full_positive_villager",
+    "JoinedVillage": "full_positive_villager",
+    "ExistingVillagerMonthly": "full_positive_villager"
+  }
+}

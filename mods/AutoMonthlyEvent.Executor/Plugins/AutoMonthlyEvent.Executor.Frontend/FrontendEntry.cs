@@ -20,6 +20,7 @@ namespace AutoMonthlyEvent.Executor.Frontend
 
                 _harmony = new Harmony("com.auto.monthlyevent.executor.frontend");
                 EventExecutionController.InstallPatches(_harmony);
+                MonthlyAutomationController.Install(_harmony);
 
                 AdaptableLog.Info("[AutoMonthlyEvent.Executor] Frontend executor plugin loaded.");
             }
@@ -45,6 +46,7 @@ namespace AutoMonthlyEvent.Executor.Frontend
         private void ReloadSettings()
         {
             ExecutorConfig config = ExecutorConfig.Load(ModIdStr);
+            MonthlyAutomationSettings.Initialize(config.ModDirectoryPath);
             ActionLogger.Configure(config);
             RelationConditionResolver.Configure(this, config);
             EventExecutionController.Configure(config);
@@ -55,6 +57,8 @@ namespace AutoMonthlyEvent.Executor.Frontend
             try
             {
                 _harmony?.UnpatchSelf();
+                MonthlyAutomationController.Reset();
+                MonthlySettingsPanel.Dispose();
                 _harmony = null;
                 ClearAsyncMethodCalls();
                 AdaptableLog.Info("[AutoMonthlyEvent.Executor] Frontend executor plugin unloaded.");

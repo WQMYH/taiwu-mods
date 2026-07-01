@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>GongfaFramework.test.Backend</AssemblyName>
+    <RootNamespace>GongfaFramework.Test.Backend</RootNamespace>
+    <OutputPath>..\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <Nullable>disable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <TaiwuDir Condition="'$(TAIWU_GAME_DIR)' != ''">$(TAIWU_GAME_DIR)</TaiwuDir>
+    <TaiwuDir Condition="'$(TaiwuDir)' == ''">A:\SteamLibrary\steamapps\common\The Scroll Of Taiwu</TaiwuDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\GongfaFramework.test.Contracts\GongfaFramework.test.Contracts.csproj" />
+    <Reference Include="GameData"><HintPath>$(TaiwuDir)\Backend\GameData.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="GameData.Common"><HintPath>$(TaiwuDir)\Backend\GameData.Common.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="GameData.Shared"><HintPath>$(TaiwuDir)\Backend\GameData.Shared.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="GameData.Utilities"><HintPath>$(TaiwuDir)\Backend\GameData.Utilities.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="GameData.Utilities.Reflection"><HintPath>$(TaiwuDir)\Backend\GameData.Utilities.Reflection.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Newtonsoft.Json"><HintPath>$(TaiwuDir)\Backend\Newtonsoft.Json.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="NLog"><HintPath>$(TaiwuDir)\Backend\NLog.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="TaiwuModdingLib"><HintPath>$(TaiwuDir)\The Scroll of Taiwu_Data\Managed\TaiwuModdingLib.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\SharedRuntime\SnapshotService.cs" Link="SharedRuntime\SnapshotService.cs" />
+    <Compile Include="..\SharedRuntime\DefinitionLoader.cs" Link="SharedRuntime\DefinitionLoader.cs" />
+  </ItemGroup>
+</Project>

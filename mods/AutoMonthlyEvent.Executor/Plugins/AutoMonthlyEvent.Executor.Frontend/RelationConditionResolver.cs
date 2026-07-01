@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using GameData.Domains.Character;
 using GameData.Domains.Character.Display;
+using GameData.Domains.TaiwuEvent.DisplayEvent;
 using GameData.GameDataBridge;
 using GameData.Serializer;
 using GameData.Utilities;
@@ -22,6 +23,11 @@ namespace AutoMonthlyEvent.Executor.Frontend
         public static CharacterDisplayData? FindRequester(EventModel eventModel)
         {
             var data = eventModel.DisplayingEventData;
+            return FindRequester(data);
+        }
+
+        public static CharacterDisplayData? FindRequester(TaiwuEventDisplayData? data)
+        {
             if (data == null)
                 return null;
 
@@ -91,6 +97,62 @@ namespace AutoMonthlyEvent.Executor.Frontend
             {
                 callback(RelationResult.Unresolved(requester.FavorabilityToTaiwu, "关系查询失败：" + ex.GetType().Name));
             }
+        }
+
+        public static void ResolveMonthly(CharacterDisplayData requester, int relationMode, int threshold, Action<RelationResult> callback)
+        {
+            IAsyncMethodRequestHandler? handler = _requestHandler;
+            int taiwuId = GetTaiwuCharId();
+            if (handler == null || taiwuId <= 0 || requester.CharacterId <= 0)
+            {
+                callback(RelationResult.Unresolved(requester.FavorabilityToTaiwu, "关系查询条件不完整"));
+                return;
+            }
+
+            try
+            {
+                CharacterDomainMethod.AsyncCall.GetRelationBetweenCharacters(handler, taiwuId, requester.CharacterId, delegate(int offset, RawDataPool pool)
+                {
+                    try
+                    {
+                        (ushort, ushort) relation = default;
+                        Serializer.Deserialize(pool, offset, ref relation);
+                        bool allowed = IsAllowedMonthlyRelation(relation.Item1, relationMode);
+                        bool enoughFavor = requester.FavorabilityToTaiwu >= threshold;
+                        callback(new RelationResult
+                        {
+                            Resolved = true,
+                            RelationType = relation.Item1,
+                            Favorability = requester.FavorabilityToTaiwu,
+                            ShouldGive = allowed || enoughFavor,
+                            Reason = allowed ? "命中允许关系" : enoughFavor ? $"关系数值达到 {threshold}" : $"关系数值低于 {threshold}"
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        callback(RelationResult.Unresolved(requester.FavorabilityToTaiwu, "关系查询结果解析失败：" + ex.GetType().Name));
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                callback(RelationResult.Unresolved(requester.FavorabilityToTaiwu, "关系查询失败：" + ex.GetType().Name));
+            }
+        }
+
+        private static bool IsAllowedMonthlyRelation(ushort relationTypes, int mode)
+        {
+            ushort[] allowed = mode <= 1
+                ? new ushort[] { 1024, 1, 2 }
+                : mode == 2
+                    ? new ushort[] { 1024, 1, 2, 64, 128, 512 }
+                    : new ushort[] { 1024, 1, 2, 64, 128, 512, 8192 };
+            foreach (ushort value in allowed)
+            {
+                if ((relationTypes & value) != 0)
+                    return true;
+            }
+            return false;
         }
 
         private static bool IsAllowedRelation(ExecutorConfig config, ushort relationTypes)

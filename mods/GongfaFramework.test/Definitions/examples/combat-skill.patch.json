@@ -1,0 +1,8 @@
+{
+  "SchemaVersion": 1,
+  "Operation": "patch",
+  "Table": "CombatSkill",
+  "TemplateId": 0,
+  "Fields": { "Name": "示例：仅用于教程", "Desc": "导入后请先预览差异。" },
+  "Source": "example"
+}

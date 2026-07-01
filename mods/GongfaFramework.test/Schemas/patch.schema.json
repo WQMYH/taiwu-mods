@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["SchemaVersion", "Operation", "Table", "TemplateId", "Fields"],
+  "properties": {
+    "SchemaVersion": { "const": 1 },
+    "Operation": { "const": "patch" },
+    "Table": { "enum": ["CombatSkill", "SkillBook", "SpecialEffect"] },
+    "TemplateId": { "type": "integer" },
+    "Fields": { "type": "object" },
+    "Source": { "type": "string" }
+  },
+  "additionalProperties": false
+}

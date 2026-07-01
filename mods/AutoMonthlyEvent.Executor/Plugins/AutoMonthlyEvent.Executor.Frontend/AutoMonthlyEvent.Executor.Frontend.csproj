@@ -49,6 +49,14 @@
       <HintPath>$(TaiwuGameDir)\The Scroll of Taiwu_Data\Managed\UnityEngine.UI.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>$(TaiwuGameDir)\The Scroll of Taiwu_Data\Managed\UnityEngine.UIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>$(TaiwuGameDir)\The Scroll of Taiwu_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Unity.TextMeshPro">
       <HintPath>$(TaiwuGameDir)\The Scroll of Taiwu_Data\Managed\Unity.TextMeshPro.dll</HintPath>
       <Private>false</Private>

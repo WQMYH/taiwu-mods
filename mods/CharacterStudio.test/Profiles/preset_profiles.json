@@ -1,0 +1,59 @@
+{
+  "SchemaVersion": 2,
+  "Profiles": [
+    {
+      "Id": "vanilla_safe",
+      "Name": "原版安全",
+      "OriginalTemplateMode": "AreaSectByGender",
+      "ExplicitTemplateId": -1,
+      "Gender": "Random",
+      "AgeMin": 18,
+      "AgeMax": 18,
+      "AttractionMin": 550,
+      "AttractionMax": 550,
+      "BodyType": -1,
+      "MainAttributes": { "Mode": "Keep", "Value": 0, "Min": 0, "Max": 0 },
+      "LifeQualifications": { "Mode": "Keep", "Value": 0, "Min": 0, "Max": 0 },
+      "CombatQualifications": { "Mode": "Keep", "Value": 0, "Min": 0, "Max": 0 },
+      "BaseHealth": 100,
+      "ApplyMorality": false,
+      "Morality": -1,
+      "ClothingTemplateId": 0,
+      "Bisexual": false,
+      "Features": {
+        "RemoveNegative": false,
+        "AddAllPositive": false,
+        "AddIds": [],
+        "RemoveIds": []
+      },
+      "RelationToTaiwu": { "RelationType": 0, "Favorability": 0 }
+    },
+    {
+      "Id": "full_positive_villager",
+      "Name": "全正面太吾村民",
+      "OriginalTemplateMode": "AreaSectByGender",
+      "ExplicitTemplateId": -1,
+      "Gender": "Random",
+      "AgeMin": 16,
+      "AgeMax": 30,
+      "AttractionMin": 550,
+      "AttractionMax": 900,
+      "BodyType": -1,
+      "MainAttributes": { "Mode": "RandomRange", "Value": 0, "Min": 75, "Max": 120 },
+      "LifeQualifications": { "Mode": "RandomRange", "Value": 0, "Min": 75, "Max": 120 },
+      "CombatQualifications": { "Mode": "RandomRange", "Value": 0, "Min": 75, "Max": 120 },
+      "BaseHealth": 10000,
+      "ApplyMorality": true,
+      "Morality": 250,
+      "ClothingTemplateId": 84,
+      "Bisexual": false,
+      "Features": {
+        "RemoveNegative": true,
+        "AddAllPositive": true,
+        "AddIds": [],
+        "RemoveIds": []
+      },
+      "RelationToTaiwu": { "RelationType": 8192, "Favorability": 30000 }
+    }
+  ]
+}

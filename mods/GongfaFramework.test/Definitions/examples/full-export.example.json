@@ -1,0 +1,14 @@
+{
+  "frameworkVersion": "0.1.0.0",
+  "exportedAt": "示例文件；真实值由游戏内导出生成",
+  "records": [
+    {
+      "Id": 0,
+      "Name": "示例",
+      "CombatSkillJson": "{\"TemplateId\":0,\"Name\":\"示例\"}",
+      "SkillBookJson": "",
+      "DirectEffectJson": "",
+      "ReverseEffectJson": ""
+    }
+  ]
+}

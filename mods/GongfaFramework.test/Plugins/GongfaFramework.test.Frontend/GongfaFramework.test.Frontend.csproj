@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>GongfaFramework.test.Frontend</AssemblyName>
+    <RootNamespace>GongfaFramework.Test.Frontend</RootNamespace>
+    <OutputPath>..\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <Nullable>disable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <TaiwuDir Condition="'$(TAIWU_GAME_DIR)' != ''">$(TAIWU_GAME_DIR)</TaiwuDir>
+    <TaiwuDir Condition="'$(TaiwuDir)' == ''">A:\SteamLibrary\steamapps\common\The Scroll Of Taiwu</TaiwuDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\GongfaFramework.test.Contracts\GongfaFramework.test.Contracts.csproj" />
+    <Reference Include="0Harmony"><HintPath>$(TaiwuDir)\The Scroll of Taiwu_Data\Managed\0Harmony.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Assembly-CSharp"><HintPath>$(TaiwuDir)\The Scroll of Taiwu_Data\Managed\Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="GameData.Common"><HintPath>$(TaiwuDir)\The Scroll of Taiwu_Data\Managed\GameData.Common.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="GameData.Serializer"><HintPath>$(TaiwuDir)\The Scroll of Taiwu_Data\Managed\GameData.Serializer.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="GameData.Shared"><HintPath>$(TaiwuDir)\The Scroll of Taiwu_Data\Managed\GameData.Shared.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="GameData.Utilities"><HintPath>$(TaiwuDir)\The Scroll of Taiwu_Data\Managed\GameData.Utilities.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Newtonsoft.Json"><HintPath>$(TaiwuDir)\The Scroll of Taiwu_Data\Managed\Newtonsoft.Json.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="TaiwuModdingLib"><HintPath>$(TaiwuDir)\The Scroll of Taiwu_Data\Managed\TaiwuModdingLib.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(TaiwuDir)\The Scroll of Taiwu_Data\Managed\UnityEngine.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(TaiwuDir)\The Scroll of Taiwu_Data\Managed\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.IMGUIModule"><HintPath>$(TaiwuDir)\The Scroll of Taiwu_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(TaiwuDir)\The Scroll of Taiwu_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\SharedRuntime\SnapshotService.cs" Link="SharedRuntime\SnapshotService.cs" />
+    <Compile Include="..\SharedRuntime\DefinitionLoader.cs" Link="SharedRuntime\DefinitionLoader.cs" />
+  </ItemGroup>
+</Project>

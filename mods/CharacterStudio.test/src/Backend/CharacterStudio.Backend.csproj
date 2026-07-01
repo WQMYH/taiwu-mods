@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>CharacterStudio.Backend</AssemblyName>
+    <RootNamespace>CharacterStudio.Backend</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <TaiwuDir Condition="'$(TaiwuDir)' == ''">A:\SteamLibrary\steamapps\common\The Scroll Of Taiwu</TaiwuDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="0Harmony"><HintPath>$(TaiwuDir)\Backend\0Harmony.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="GameData"><HintPath>$(TaiwuDir)\Backend\GameData.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="GameData.Common"><HintPath>$(TaiwuDir)\Backend\GameData.Common.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="GameData.ArchiveData"><HintPath>$(TaiwuDir)\Backend\GameData.ArchiveData.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="GameData.Shared"><HintPath>$(TaiwuDir)\Backend\GameData.Shared.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="GameData.Serializer"><HintPath>$(TaiwuDir)\Backend\GameData.Serializer.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="GameData.Utilities"><HintPath>$(TaiwuDir)\Backend\GameData.Utilities.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Redzen"><HintPath>$(TaiwuDir)\Backend\Redzen.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="TaiwuModdingLib"><HintPath>$(TaiwuDir)\The Scroll of Taiwu_Data\Managed\TaiwuModdingLib.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>

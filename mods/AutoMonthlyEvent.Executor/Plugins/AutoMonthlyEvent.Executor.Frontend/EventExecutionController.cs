@@ -43,6 +43,9 @@ namespace AutoMonthlyEvent.Executor.Frontend
             if (config == null || data == null)
                 return;
 
+            if (MonthlyAutomationController.TryHandleNameInput(eventModel, data))
+                return;
+
             string signature = EventClassifier.BuildSignature(data);
             string candidateType = EventClassifier.Classify(data);
             ActionLogger.Debug("observe", data.EventGuid ?? string.Empty, candidateType, BuildDebugSnapshot(data, signature));
